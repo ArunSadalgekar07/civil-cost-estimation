@@ -247,6 +247,9 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins can view audit logs" ON audit_logs FOR SELECT USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
+CREATE POLICY "Users can insert their own audit logs" ON audit_logs FOR INSERT WITH CHECK (
+  auth.uid() = user_id
+);
 
 -- ============================================================
 -- SUBSCRIPTIONS

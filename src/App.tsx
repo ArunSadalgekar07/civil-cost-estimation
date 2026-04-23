@@ -4,6 +4,7 @@ import { Toaster } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { useSystemStore } from '@/store/systemStore'
+import { auditLogger } from '@/lib/auditLogger'
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout'
@@ -68,11 +69,23 @@ export default function App() {
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    let lastUserId = ''
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else setLoading(false)
+      
+      if (session?.user) {
+        fetchProfile(session.user.id)
+        
+        if (event === 'SIGNED_IN' && session.user.id !== lastUserId) {
+          lastUserId = session.user.id
+          auditLogger.logLogin(session.user.id, session.user.app_metadata.provider || 'email')
+        }
+      } else {
+        lastUserId = ''
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()

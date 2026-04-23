@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase, db } from '@/lib/supabase'
+import { auditLogger } from '@/lib/auditLogger'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '@/types'
 
@@ -28,6 +29,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (loading) => set({ loading }),
 
   signOut: async () => {
+    const activeUser = useAuthStore.getState().user
+    if (activeUser) {
+      await auditLogger.logLogout(activeUser.id)
+    }
+    
     await supabase.auth.signOut()
     set({ user: null, session: null, profile: null })
   },

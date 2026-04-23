@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { X, Copy, Check, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { generateShareToken } from '@/lib/utils'
+import { auditLogger } from '@/lib/auditLogger'
+import { useAuthStore } from '@/store/authStore'
 import type { Project } from '@/types'
 
 interface Props {
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export default function ShareModal({ project, onClose }: Props) {
+  const { user } = useAuthStore()
   const [token] = useState(() => generateShareToken())
   const [copied, setCopied] = useState(false)
   const [password, setPassword] = useState('')
@@ -76,7 +79,10 @@ export default function ShareModal({ project, onClose }: Props) {
             </select>
           </div>
 
-          <button className="btn-primary w-full" onClick={() => { toast.success('Share link generated!') }}>
+          <button className="btn-primary w-full" onClick={() => { 
+            if (user) auditLogger.logShareLinkGenerated(user.id, project.id)
+            toast.success('Share link generated!') 
+          }}>
             Generate & Save Link
           </button>
 
