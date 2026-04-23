@@ -4,7 +4,7 @@ import { db } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Plus, Search, Pencil, Trash2, Eye } from 'lucide-react'
 import { toast } from 'sonner'
-import { CURRENCIES } from '@/lib/utils'
+import { useSystemStore } from '@/store/systemStore'
 
 interface CostDatabaseItem {
   id: string
@@ -19,6 +19,7 @@ interface CostDatabaseItem {
 export default function CostDatabasesPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
+  const { currencies } = useSystemStore()
   const [databases, setDatabases] = useState<CostDatabaseItem[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -143,7 +144,7 @@ export default function CostDatabasesPage() {
               <div>
                 <label className="label">Currency</label>
                 <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                  {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {currencies.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">

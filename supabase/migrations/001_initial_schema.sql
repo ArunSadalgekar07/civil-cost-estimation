@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS projects (
 
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can CRUD own projects" ON projects FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Admins can view entire network projects" ON projects FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- ============================================================
 -- COST ITEMS
@@ -67,6 +70,9 @@ ALTER TABLE cost_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can CRUD own cost items" ON cost_items FOR ALL USING (
   EXISTS (SELECT 1 FROM projects WHERE id = cost_items.project_id AND user_id = auth.uid())
 );
+CREATE POLICY "Admins can view entire network cost items" ON cost_items FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- ============================================================
 -- RISKS
@@ -86,6 +92,9 @@ ALTER TABLE risks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can CRUD own risks" ON risks FOR ALL USING (
   EXISTS (SELECT 1 FROM projects WHERE id = risks.project_id AND user_id = auth.uid())
 );
+CREATE POLICY "Admins can view entire network risks" ON risks FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- ============================================================
 -- FINANCIAL SETTINGS
@@ -104,6 +113,9 @@ ALTER TABLE financial_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can CRUD own financial settings" ON financial_settings FOR ALL USING (
   EXISTS (SELECT 1 FROM projects WHERE id = financial_settings.project_id AND user_id = auth.uid())
 );
+CREATE POLICY "Admins can view entire network financial settings" ON financial_settings FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- ============================================================
 -- PROJECT VERSIONS
@@ -119,6 +131,9 @@ CREATE TABLE IF NOT EXISTS project_versions (
 ALTER TABLE project_versions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can CRUD own versions" ON project_versions FOR ALL USING (
   EXISTS (SELECT 1 FROM projects WHERE id = project_versions.project_id AND user_id = auth.uid())
+);
+CREATE POLICY "Admins can view entire network versions" ON project_versions FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
 -- ============================================================
@@ -139,6 +154,9 @@ CREATE POLICY "Anyone can read shared projects" ON shared_projects FOR SELECT US
 CREATE POLICY "Owners can manage shared projects" ON shared_projects FOR ALL USING (
   EXISTS (SELECT 1 FROM projects WHERE id = shared_projects.project_id AND user_id = auth.uid())
 );
+CREATE POLICY "Admins can view entire network shared projects" ON shared_projects FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
 -- ============================================================
 -- PROJECT COLLABORATORS
@@ -157,6 +175,9 @@ ALTER TABLE project_collaborators ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Collaborators can view" ON project_collaborators FOR SELECT USING (
   auth.uid() = user_id OR
   EXISTS (SELECT 1 FROM projects WHERE id = project_collaborators.project_id AND user_id = auth.uid())
+);
+CREATE POLICY "Admins can manage entire network collaborators" ON project_collaborators FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
 -- ============================================================
@@ -253,6 +274,12 @@ CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT UNIQUE NOT NULL,
   value TEXT,
   updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view app settings" ON app_settings FOR SELECT USING (true);
+CREATE POLICY "Admins can manage app settings" ON app_settings FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
 -- ============================================================

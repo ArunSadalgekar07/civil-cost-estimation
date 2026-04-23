@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { useProjectStore } from '@/store/projectStore'
 import { useAuthStore } from '@/store/authStore'
-import { PROJECT_TYPES, SIZE_UNITS, DURATION_UNITS } from '@/lib/utils'
+import { useSystemStore } from '@/store/systemStore'
 import { toast } from 'sonner'
 import type { Project } from '@/types'
 
@@ -15,6 +15,7 @@ interface Props {
 export default function ProjectFormModal({ project, onClose }: Props) {
   const { t } = useTranslation()
   const { user } = useAuthStore()
+  const { projectTypes, sizeUnits, durationUnits } = useSystemStore()
   const { createProject, updateProject } = useProjectStore()
   const [loading, setLoading] = useState(false)
 
@@ -89,7 +90,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
             <label className="label">{t('projects.form.type')}</label>
             <select className="input" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
               <option value="">Select type...</option>
-              {PROJECT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              {projectTypes.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
 
@@ -105,7 +106,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
             <div className="flex gap-2">
               <input type="number" className="input" placeholder="e.g. 3000" value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))} />
               <select className="input w-40" value={form.size_unit} onChange={e => setForm(f => ({ ...f, size_unit: e.target.value }))}>
-                {SIZE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                {sizeUnits.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
           </div>
@@ -116,7 +117,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
             <div className="flex gap-2">
               <input type="number" className="input" placeholder="e.g. 12" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} />
               <select className="input w-36" value={form.duration_unit} onChange={e => setForm(f => ({ ...f, duration_unit: e.target.value }))}>
-                {DURATION_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                {durationUnits.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
           </div>
