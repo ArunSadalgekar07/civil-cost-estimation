@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
+import { useSystemStore } from '@/store/systemStore'
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout'
@@ -24,6 +25,8 @@ import ShareViewPage from '@/pages/share/ShareViewPage'
 // Admin pages
 import AdminUsersPage from '@/pages/admin/AdminUsersPage'
 import AdminSubscriptionsPage from '@/pages/admin/AdminSubscriptionsPage'
+import AdminProjectsPage from '@/pages/admin/AdminProjectsPage'
+import AdminProjectDataPage from '@/pages/admin/AdminProjectDataPage'
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage'
 import AdminAuditLogsPage from '@/pages/admin/AdminAuditLogsPage'
 
@@ -50,8 +53,12 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { setUser, setSession, setLoading, fetchProfile } = useAuthStore()
+  const { fetchDictionaries } = useSystemStore()
 
   useEffect(() => {
+    // Warm up the global state dictionaries
+    fetchDictionaries()
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -102,6 +109,8 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="admin/users" element={<AdminUsersPage />} />
           <Route path="admin/subscriptions" element={<AdminSubscriptionsPage />} />
+          <Route path="admin/projects" element={<AdminProjectsPage />} />
+          <Route path="admin/project-data" element={<AdminProjectDataPage />} />
           <Route path="admin/settings" element={<AdminSettingsPage />} />
           <Route path="admin/audit-logs" element={<AdminAuditLogsPage />} />
         </Route>

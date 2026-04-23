@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactECharts from 'echarts-for-react'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts'
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
+import { useSystemStore } from '@/store/systemStore'
 import { db } from '@/lib/supabase'
-import { formatCurrency, CURRENCIES } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { calculateCostSummary } from '@/lib/calculations'
 import type { CostItem, FinancialSettings, Risk } from '@/types'
 import { TrendingUp } from 'lucide-react'
@@ -13,8 +15,9 @@ export default function AnalyticsPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { projects, fetchProjects } = useProjectStore()
+  const { currencies } = useSystemStore()
   const [selectedProject, setSelectedProject] = useState('all')
-  const [currency, setCurrency] = useState('USD')
+  const [selectedCurrency, setSelectedCurrency] = useState('USD')
   const [projectData, setProjectData] = useState<Record<string, { items: CostItem[], risks: Risk[], settings: FinancialSettings | null }>>({})
   const [loading, setLoading] = useState(true)
 
@@ -41,9 +44,8 @@ export default function AnalyticsPage() {
       }
       setProjectData(data)
       
-      // Smartly infer the most common currency or grab the first active one, instead of defaulting to USD
       const foundCurrency = Object.values(data).find(d => d.settings?.currency)?.settings?.currency
-      if (foundCurrency) setCurrency(foundCurrency)
+      if (foundCurrency) setSelectedCurrency(foundCurrency)
       
       setLoading(false)
     }
@@ -85,7 +87,7 @@ export default function AnalyticsPage() {
 
   const pieOption = {
     backgroundColor: 'transparent',
-    tooltip: { trigger: 'item', formatter: (p: { name: string; value: number; percent: number }) => `${p.name}: ${formatCurrency(p.value, currency)} (${p.percent}%)` },
+    tooltip: { trigger: 'item', formatter: (p: { name: string; value: number; percent: number }) => `${p.name}: ${formatCurrency(p.value, selectedCurrency)} (${p.percent}%)` },
     legend: { bottom: 0, textStyle: { color: '#94a3b8' } },
     series: [{
       name: 'Cost Distribution',
@@ -122,7 +124,6 @@ export default function AnalyticsPage() {
 
   return (
     <div className="animate-in space-y-6">
-      {/* Breadcrumb */}
       <div className="text-sm text-surface-muted">
         {t('common.home')} <span className="mx-1">›</span>
         <span className="text-white font-medium">{t('analytics.title')}</span>
@@ -130,7 +131,6 @@ export default function AnalyticsPage() {
 
       <h1 className="text-2xl font-bold text-white">{t('analytics.title')}</h1>
 
-      {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
         <div>
           <label className="label">{t('analytics.selectProject')}</label>
@@ -141,13 +141,12 @@ export default function AnalyticsPage() {
         </div>
         <div>
           <label className="label">{t('analytics.selectCurrency')}</label>
-          <select className="input" value={currency} onChange={e => setCurrency(e.target.value)}>
-            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+            <select className="input py-1 text-sm bg-surface border-surface-border text-white rounded" value={selectedCurrency} onChange={e => setSelectedCurrency(e.target.value)}>
+              {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
         </div>
       </div>
 
-      {/* KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="stat-card">
           <p className="stat-label">{t('analytics.totalCost')}</p>
