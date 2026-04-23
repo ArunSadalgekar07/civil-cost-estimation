@@ -1,6 +1,29 @@
+import { useState, useEffect } from 'react'
 import { Home } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const [stats, setStats] = useState({ projects: '...', users: '...', languages: '2' })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_platform_stats')
+        const rpcData = data as { projects: number; users: number; languages: number } | null
+        
+        if (!error && rpcData) {
+          setStats({
+            projects: `${rpcData.projects}+`,
+            users: rpcData.users > 1000 ? `${(rpcData.users / 1000).toFixed(1)}K` : rpcData.users.toString(),
+            languages: rpcData.languages.toString()
+          })
+        }
+      } catch (err) {
+        // Fail silently and keep placeholders if RPC misses
+      }
+    }
+    fetchStats()
+  }, [])
   return (
     <div className="min-h-screen bg-surface flex">
       {/* Left branding panel */}
@@ -35,12 +58,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 pt-4">
             {[
-              { label: 'Projects', value: '500+' },
-              { label: 'Users', value: '1.2K' },
-              { label: 'Languages', value: '2' },
+              { label: 'Projects', value: stats.projects },
+              { label: 'Users', value: stats.users },
+              { label: 'Languages', value: stats.languages },
             ].map(stat => (
               <div key={stat.label} className="bg-white/10 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-white">{stat.value}</p>
+                <p className="text-2xl font-bold text-white transition-opacity duration-300">
+                  {stat.value}
+                </p>
                 <p className="text-blue-200 text-xs mt-1">{stat.label}</p>
               </div>
             ))}

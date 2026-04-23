@@ -6,12 +6,18 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency = 'USD', locale = 'en-US'): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  } catch (error) {
+    // If the Admin entered a custom string (e.g. 'Rupees') instead of an ISO code (e.g. 'INR')
+    // Fallback gracefully without destroying the React rendering tree
+    return `${currency} ${amount.toLocaleString(locale, { maximumFractionDigits: 0 })}`
+  }
 }
 
 export function formatPdfCurrency(amount: number, currency = 'USD', locale = 'en-US'): string {

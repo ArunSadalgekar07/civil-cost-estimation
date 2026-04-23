@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
         const [itemsRes, risksRes, settingsRes] = await Promise.all([
           db.from('cost_items').select('*').eq('project_id', proj.id),
           db.from('risks').select('*').eq('project_id', proj.id),
-          db.from('financial_settings').select('*').eq('project_id', proj.id).single(),
+          db.from('financial_settings').select('*').eq('project_id', proj.id).maybeSingle(),
         ])
         data[proj.id] = {
           items: (itemsRes.data || []) as CostItem[],
@@ -85,6 +85,13 @@ export default function AnalyticsPage() {
     { materials: 0, labor: 0, equipment: 0, additional: 0 }
   )
 
+  let currencySymbol = '$'
+  try {
+    currencySymbol = new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedCurrency }).formatToParts(0).find(p => p.type === 'currency')?.value || '$'
+  } catch (e) {
+    currencySymbol = selectedCurrency
+  }
+
   const pieOption = {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item', formatter: (p: { name: string; value: number; percent: number }) => `${p.name}: ${formatCurrency(p.value, selectedCurrency)} (${p.percent}%)` },
@@ -114,7 +121,7 @@ export default function AnalyticsPage() {
       data: relevantProjects.map(p => p.name.length > 15 ? p.name.slice(0, 15) + '...' : p.name),
       axisLabel: { color: '#94a3b8', rotate: 30, fontSize: 10 }
     },
-    yAxis: { type: 'value', axisLabel: { color: '#94a3b8', formatter: (v: number) => `$${(v/1000).toFixed(0)}K` } },
+    yAxis: { type: 'value', axisLabel: { color: '#94a3b8', formatter: (v: number) => `${currencySymbol}${(v/1000).toFixed(0)}K` } },
     series: [{
       type: 'bar',
       data: relevantProjects.map(p => getSummary(p.id)?.grandTotal || 0),
@@ -150,7 +157,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="stat-card">
           <p className="stat-label">{t('analytics.totalCost')}</p>
-          <p className="text-3xl font-bold text-white">{formatCurrency(totalCost, currency)}</p>
+          <p className="text-3xl font-bold text-white">{formatCurrency(totalCost, selectedCurrency)}</p>
           <p className="stat-sub">{t('analytics.acrossProjects', { count: relevantProjects.length })}</p>
         </div>
         <div className="stat-card">
@@ -161,7 +168,7 @@ export default function AnalyticsPage() {
         <div className="stat-card">
           <p className="stat-label">Avg. Project Cost</p>
           <p className="text-3xl font-bold text-white">
-            {formatCurrency(relevantProjects.length > 0 ? totalCost / relevantProjects.length : 0, currency)}
+            {formatCurrency(relevantProjects.length > 0 ? totalCost / relevantProjects.length : 0, selectedCurrency)}
           </p>
           <p className="stat-sub">Per project average</p>
         </div>

@@ -8,6 +8,13 @@ interface Props { projectId: string }
 export default function AnalyticsProjectTab({ projectId }: Props) {
   const { costItems, risks, financialSettings } = useProjectStore()
   const currency = financialSettings?.currency || 'USD'
+  
+  let currencySymbol = '$'
+  try {
+    currencySymbol = new Intl.NumberFormat('en-US', { style: 'currency', currency }).formatToParts(0).find(p => p.type === 'currency')?.value || '$'
+  } catch (e) {
+    currencySymbol = currency // Fallback if custom text was used instead of ISO string
+  }
 
   const summary = calculateCostSummary(
     costItems,
@@ -67,7 +74,7 @@ export default function AnalyticsProjectTab({ projectId }: Props) {
       type: 'value',
       axisLabel: {
         color: '#94a3b8',
-        formatter: (v: number) => `$${(v / 1000).toFixed(0)}K`
+        formatter: (v: number) => `${currencySymbol}${(v / 1000).toFixed(0)}K`
       }
     },
     series: [{

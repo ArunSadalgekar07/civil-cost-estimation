@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { db, supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import i18n from '@/i18n/config'
-import { User, Globe, Bell, Lock } from 'lucide-react'
+import { User, Globe, Bell, Lock, Database } from 'lucide-react'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -14,10 +14,60 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [lang, setLang] = useState(i18n.language)
 
-  // Security States
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [updatingPassword, setUpdatingPassword] = useState(false)
+
+  // Data Portability States
+  const [exporting, setExporting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleExportData = async () => {
+    setExporting(true)
+    toast.info('Structuring export payload... Please wait.')
+    
+    // Fetch all user projects with deeply nested relationships
+    const { data, error } = await db.from('projects')
+      .select('*, cost_items(*), risks(*), financial_settings(*), project_versions(*)')
+      .eq('user_id', user!.id)
+
+    if (error || !data) {
+      toast.error('Failed to extract data: ' + (error?.message || 'Unknown error'))
+      setExporting(false)
+      return
+    }
+
+    // Format structure to JSON and trigger Blob download
+    const jsonString = JSON.stringify(data, null, 2)
+    const blob = new Blob([jsonString], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `cost_estimator_data_export_${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast.success('System export completed successfully!')
+    setExporting(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('WARNING: Are you absolutely sure? This will PERMANENTLY delete your account, all your projects, and all associated structural data. This cannot be undone.')) return
+    
+    setDeleting(true)
+    const { error } = await supabase.rpc('delete_user_account')
+
+    if (error) {
+      toast.error('Account deletion failed: ' + error.message)
+      setDeleting(false)
+    } else {
+      toast.success('Account successfully purged. Goodbye.')
+      await supabase.auth.signOut()
+    }
+  }
 
   const handleUpdatePassword = async () => {
     if (!currentPassword) {
@@ -70,6 +120,7 @@ export default function SettingsPage() {
     { id: 'preferences', label: t('settings.preferences'), icon: <Globe size={16} /> },
     { id: 'notifications', label: t('settings.notifications'), icon: <Bell size={16} /> },
     { id: 'security', label: 'Security', icon: <Lock size={16} /> },
+    { id: 'data', label: 'Data Management', icon: <Database size={16} /> },
   ]
 
   return (
@@ -185,6 +236,43 @@ export default function SettingsPage() {
               >
                 {updatingPassword ? 'Updating...' : 'Update Password'}
               </button>
+            </div>
+          )}
+
+          {activeSection === 'data' && (
+            <div className="space-y-6">
+              <div className="card space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="font-semibold text-white">Mass Data Export</h2>
+                    <p className="text-sm text-surface-muted mt-1">Download a completely offline backup copy of all your created projects, cost tracking models, settings, and histories encapsulated into a portable JSON structure.</p>
+                  </div>
+                  <Database className="text-accent opacity-50" size={32} />
+                </div>
+                <button 
+                  onClick={handleExportData} 
+                  disabled={exporting} 
+                  className="btn-outline border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                >
+                  {exporting ? 'Extracting payload...' : 'Download JSON Platform Backup'}
+                </button>
+              </div>
+
+              <div className="card border-red-500/20 bg-red-950/20 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="font-semibold text-red-500">Danger Zone: Purge Account</h2>
+                    <p className="text-sm text-surface-muted mt-1">Execute the Right to be Forgotten protocol. Permanently obliterate this system profile and cascade-delete all connected estimation data instantly.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleDeleteAccount} 
+                  disabled={deleting} 
+                  className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded font-medium text-sm transition-colors"
+                >
+                  {deleting ? 'Awaiting server...' : 'Permanently Delete Account'}
+                </button>
+              </div>
             </div>
           )}
         </div>
