@@ -8,7 +8,6 @@
     "adminPanel": "Admin Panel",
     "appSettings": "App Settings",
     "users": "Users",
-    "subscriptions": "Subscriptions",
     "auditLogs": "Audit Logs",
     "projectData": "Project Data Settings",
     "logout": "Logout",
@@ -34,12 +33,10 @@
   "projects": {
     "title": "Projects",
     "myProjects": "My Projects",
-    "sharedWithMe": "Shared With Me",
     "createNew": "Create New Project",
     "noProjects": "No projects yet",
     "search": "Search...",
     "projectCount": "{{count}} projects",
-    "noSharedProjects": "No shared projects.",
     "edit": "Edit",
     "share": "Share",
     "delete": "Delete",
@@ -166,7 +163,6 @@
   "admin": {
     "title": "Admin Panel",
     "users": "Users",
-    "subscriptions": "Subscriptions",
     "auditLogs": "Audit Logs",
     "appSettings": "App Settings"
   },

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import { calculateCostSummary } from '@/lib/calculations'
-import { formatCurrency } from '@/lib/utils'
+import { DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
 import { useSystemStore } from '@/store/systemStore'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
@@ -15,7 +15,7 @@ export default function PricingTab({ projectId }: Props) {
   
   const [settings, setSettings] = useState(financialSettings || {
     id: '', project_id: projectId,
-    overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: 'USD'
+    overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY
   })
   const [saving, setSaving] = useState(false)
 

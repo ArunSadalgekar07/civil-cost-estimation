@@ -8,7 +8,6 @@
     "adminPanel": "एडमिन पैनल",
     "appSettings": "ऐप सेटिंग्स",
     "users": "उपयोगकर्ता",
-    "subscriptions": "सदस्यता",
     "auditLogs": "ऑडिट लॉग्स",
     "projectData": "प्रोजेक्ट डेटा सेटिंग्स",
     "logout": "लॉग आउट",
@@ -34,12 +33,10 @@
   "projects": {
     "title": "प्रोजेक्ट्स",
     "myProjects": "मेरे प्रोजेक्ट्स",
-    "sharedWithMe": "मेरे साथ साझा किए गए",
     "createNew": "नया प्रोजेक्ट बनाएं",
     "noProjects": "अभी तक कोई प्रोजेक्ट नहीं",
     "search": "खोजें...",
     "projectCount": "{{count}} प्रोजेक्ट्स",
-    "noSharedProjects": "कोई साझा प्रोजेक्ट नहीं।",
     "edit": "संपादित करें",
     "share": "साझा करें",
     "delete": "हटाएं",
@@ -166,7 +163,6 @@
   "admin": {
     "title": "एडमिन पैनल",
     "users": "उपयोगकर्ता",
-    "subscriptions": "सदस्यता",
     "auditLogs": "ऑडिट लॉग्स",
     "appSettings": "ऐप सेटिंग्स"
   },

@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { useSystemStore } from '@/store/systemStore'
 import { db } from '@/lib/supabase'
-import { formatCurrency } from '@/lib/utils'
+import { convertCurrency, DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
 import { calculateCostSummary } from '@/lib/calculations'
 import type { CostItem, FinancialSettings, Risk } from '@/types'
 import { TrendingUp } from 'lucide-react'
@@ -16,7 +16,7 @@ export default function AnalyticsPage() {
   const { projects, fetchProjects } = useProjectStore()
   const { currencies } = useSystemStore()
   const [selectedProject, setSelectedProject] = useState('all')
-  const [selectedCurrency, setSelectedCurrency] = useState('USD')
+  const [selectedCurrency, setSelectedCurrency] = useState(DEFAULT_CURRENCY)
   const [projectData, setProjectData] = useState<Record<string, { items: CostItem[], risks: Risk[], settings: FinancialSettings | null }>>({})
   const [loading, setLoading] = useState(true)
 
@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
   }, [projects])
 
   const defaultSettings: FinancialSettings = {
-    id: '', project_id: '', overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: 'USD'
+    id: '', project_id: '', overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY
   }
 
   const getSummary = (projectId: string) => {
@@ -63,21 +63,25 @@ export default function AnalyticsPage() {
     return calculateCostSummary(d.items, d.settings || defaultSettings, d.risks)
   }
 
+  const getProjectCurrency = (projectId: string) => projectData[projectId]?.settings?.currency || DEFAULT_CURRENCY
+  const convertProjectAmount = (projectId: string, amount: number) =>
+    convertCurrency(amount, getProjectCurrency(projectId), selectedCurrency)
+
   const relevantProjects = selectedProject === 'all' ? projects : projects.filter(p => p.id === selectedProject)
 
   const totalCost = relevantProjects.reduce((acc, p) => {
     const s = getSummary(p.id)
-    return acc + (s?.grandTotal || 0)
+    return acc + (s ? convertProjectAmount(p.id, s.grandTotal) : 0)
   }, 0)
 
   const aggregatePie = relevantProjects.reduce(
     (acc, p) => {
       const s = getSummary(p.id)
       if (s) {
-        acc.materials += s.materialsCost
-        acc.labor += s.laborCost
-        acc.equipment += s.equipmentCost
-        acc.additional += s.additionalCost
+        acc.materials += convertProjectAmount(p.id, s.materialsCost)
+        acc.labor += convertProjectAmount(p.id, s.laborCost)
+        acc.equipment += convertProjectAmount(p.id, s.equipmentCost)
+        acc.additional += convertProjectAmount(p.id, s.additionalCost)
       }
       return acc
     },
@@ -123,7 +127,10 @@ export default function AnalyticsPage() {
     yAxis: { type: 'value', axisLabel: { color: '#94a3b8', formatter: (v: number) => `${currencySymbol}${(v/1000).toFixed(0)}K` } },
     series: [{
       type: 'bar',
-      data: relevantProjects.map(p => getSummary(p.id)?.grandTotal || 0),
+      data: relevantProjects.map(p => {
+        const summary = getSummary(p.id)
+        return summary ? convertProjectAmount(p.id, summary.grandTotal) : 0
+      }),
       itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] },
     }],
   }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Bell, User, Globe } from 'lucide-react'
+import { User, Globe } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import i18n from '@/i18n/config'
 import { Root, Trigger, Portal, Content, Item } from '@radix-ui/react-dropdown-menu'
@@ -9,6 +10,7 @@ import NotificationsDropdown from './NotificationsDropdown'
 
 export default function Header() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { user, profile } = useAuthStore()
   const [lang, setLang] = useState(i18n.language)
 
@@ -60,7 +62,10 @@ export default function Header() {
               <p className="text-sm font-medium text-white">{displayName}</p>
               <p className="text-xs text-surface-muted">{user?.email}</p>
             </div>
-            <Item className="flex items-center gap-2 px-3 py-2 text-sm text-surface-muted hover:text-white hover:bg-white/5 rounded-lg cursor-pointer outline-none transition-colors">
+            <Item
+              onSelect={() => navigate('/settings')}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-surface-muted hover:text-white hover:bg-white/5 rounded-lg cursor-pointer outline-none transition-colors"
+            >
               <User size={14} />
               Profile
             </Item>

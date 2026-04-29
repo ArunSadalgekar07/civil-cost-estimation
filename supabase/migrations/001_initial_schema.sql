@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   avatar_url TEXT,
-  subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro', 'enterprise')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -252,24 +251,6 @@ CREATE POLICY "Users can insert their own audit logs" ON audit_logs FOR INSERT W
 );
 
 -- ============================================================
--- SUBSCRIPTIONS
--- ============================================================
-CREATE TABLE IF NOT EXISTS subscriptions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'pro', 'enterprise')),
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'expired')),
-  expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own subscriptions" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all" ON subscriptions FOR SELECT USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
-
--- ============================================================
 -- APP SETTINGS (Admin only)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS app_settings (
@@ -291,12 +272,11 @@ CREATE POLICY "Admins can manage app settings" ON app_settings FOR ALL USING (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, role, subscription_tier)
+  INSERT INTO public.profiles (id, full_name, role)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    'user',
-    'free'
+    'user'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;

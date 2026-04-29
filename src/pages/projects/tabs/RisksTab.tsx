@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProjectStore } from '@/store/projectStore'
-import { formatCurrency } from '@/lib/utils'
+import { DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
 import { Plus, Trash2, Pencil, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Risk } from '@/types'
@@ -15,7 +15,7 @@ export default function RisksTab({ projectId }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editRisk, setEditRisk] = useState<Risk | null>(null)
 
-  const currency = financialSettings?.currency || 'USD'
+  const currency = financialSettings?.currency || DEFAULT_CURRENCY
   const totalContingency = risks.reduce((acc, r) => acc + r.impact * (r.probability / 100), 0)
 
   const handleDelete = async (id: string) => {

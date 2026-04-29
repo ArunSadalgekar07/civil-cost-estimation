@@ -23,7 +23,7 @@ const DEFAULT_DEFS = {
   sizeUnits: ['Square Meters', 'Square Feet', 'Hectares', 'Acres'],
   durationUnits: ['Days', 'Weeks', 'Months', 'Years'],
   costCategories: ['materials', 'labor', 'equipment', 'additional'],
-  currencies: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'EGP', 'YER', 'KWD', 'QAR', 'INR']
+  currencies: ['INR', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'EGP', 'YER', 'KWD', 'QAR']
 }
 
 export const useSystemStore = create<SystemState>((set) => ({

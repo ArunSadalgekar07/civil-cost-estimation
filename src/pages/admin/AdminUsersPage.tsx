@@ -8,7 +8,6 @@ interface UserProfile {
   id: string
   full_name: string | null
   role: string | null
-  subscription_tier: string | null
   created_at: string | null
 }
 
@@ -16,41 +15,34 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  
-  // Modal states
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
   const [updating, setUpdating] = useState(false)
-  
-  // Edit form states
   const [editRole, setEditRole] = useState('')
-  const [editTier, setEditTier] = useState('')
 
   useEffect(() => {
     const fetch = async () => {
       const { data } = await db
         .from('profiles')
-        .select('id, full_name, role, subscription_tier, created_at')
-      
-      const typed = (data || []) as UserProfile[]
-      setUsers(typed)
+        .select('id, full_name, role, created_at')
+
+      setUsers((data || []) as UserProfile[])
       setLoading(false)
     }
     fetch()
   }, [])
 
-  const handleOpenUser = (u: UserProfile) => {
-    setSelectedUser(u)
-    setEditRole(u.role || 'user')
-    setEditTier(u.subscription_tier || 'free')
+  const handleOpenUser = (user: UserProfile) => {
+    setSelectedUser(user)
+    setEditRole(user.role || 'user')
   }
 
   const handleUpdate = async () => {
     if (!selectedUser) return
     setUpdating(true)
-    
+
     const { error } = await db
       .from('profiles')
-      .update({ role: editRole, subscription_tier: editTier })
+      .update({ role: editRole })
       .eq('id', selectedUser.id)
 
     if (error) {
@@ -58,18 +50,16 @@ export default function AdminUsersPage() {
       console.error(error)
     } else {
       toast.success('User updated successfully')
-      setUsers(users.map(u => 
-        u.id === selectedUser.id 
-          ? { ...u, role: editRole, subscription_tier: editTier } 
-          : u
+      setUsers(users.map(user =>
+        user.id === selectedUser.id ? { ...user, role: editRole } : user
       ))
       setSelectedUser(null)
     }
     setUpdating(false)
   }
 
-  const filtered = users.filter(u =>
-    (u.full_name || '').toLowerCase().includes(search.toLowerCase())
+  const filtered = users.filter(user =>
+    (user.full_name || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -90,32 +80,28 @@ export default function AdminUsersPage() {
             <tr>
               <th>Name</th>
               <th>Role</th>
-              <th>Plan</th>
               <th>Joined</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="text-center py-8">
+              <tr><td colSpan={4} className="text-center py-8">
                 <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
               </td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-8 text-surface-muted">No users found.</td></tr>
-            ) : filtered.map(u => (
-              <tr key={u.id}>
-                <td className="font-medium">{u.full_name || 'Unnamed User'}</td>
+              <tr><td colSpan={4} className="text-center py-8 text-surface-muted">No users found.</td></tr>
+            ) : filtered.map(user => (
+              <tr key={user.id}>
+                <td className="font-medium">{user.full_name || 'Unnamed User'}</td>
                 <td>
-                  <span className={`badge ${u.role === 'admin' ? 'badge-blue' : 'badge-green'}`}>
-                    {u.role || 'user'}
+                  <span className={`badge ${user.role === 'admin' ? 'badge-blue' : 'badge-green'}`}>
+                    {user.role || 'user'}
                   </span>
                 </td>
+                <td className="text-surface-muted">{user.created_at ? formatDate(user.created_at) : '-'}</td>
                 <td>
-                  <span className="badge badge-yellow capitalize">{u.subscription_tier || 'free'}</span>
-                </td>
-                <td className="text-surface-muted">{u.created_at ? formatDate(u.created_at) : '—'}</td>
-                <td>
-                  <button onClick={() => handleOpenUser(u)} className="btn btn-ghost p-1 text-xs px-3">View</button>
+                  <button onClick={() => handleOpenUser(user)} className="btn btn-ghost p-1 text-xs px-3">View</button>
                 </td>
               </tr>
             ))}
@@ -123,11 +109,9 @@ export default function AdminUsersPage() {
         </table>
       </div>
 
-      {/* User Editing Modal Overlay */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-surface-card border border-surface-border rounded-xl w-full max-w-md shadow-2xl animate-in overflow-hidden">
-            {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-surface-border">
               <h2 className="text-lg font-semibold text-white">Manage User</h2>
               <button onClick={() => setSelectedUser(null)} className="btn btn-ghost p-1.5 focus:outline-none hover:bg-surface border-0">
@@ -135,7 +119,6 @@ export default function AdminUsersPage() {
               </button>
             </div>
 
-            {/* Content */}
             <div className="p-5 space-y-4">
               <div>
                 <label className="text-xs font-semibold text-surface-muted uppercase tracking-wider">User ID</label>
@@ -156,18 +139,8 @@ export default function AdminUsersPage() {
                   <option value="admin">System Admin (admin)</option>
                 </select>
               </div>
-
-              <div>
-                <label className="text-xs font-semibold text-surface-muted uppercase tracking-wider mb-1 block">Subscription Tier</label>
-                <select className="input w-full" value={editTier} onChange={e => setEditTier(e.target.value)}>
-                  <option value="free">Free Tier</option>
-                  <option value="pro">Pro Tier</option>
-                  <option value="enterprise">Enterprise Tier</option>
-                </select>
-              </div>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-end gap-3 p-5 border-t border-surface-border bg-surface-card/50">
               <button disabled={updating} onClick={() => setSelectedUser(null)} className="btn-outline text-sm py-2 px-4">Cancel</button>
               <button disabled={updating} onClick={handleUpdate} className="btn-primary text-sm py-2 px-6">

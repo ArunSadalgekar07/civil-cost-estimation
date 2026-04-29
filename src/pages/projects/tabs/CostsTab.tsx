@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProjectStore } from '@/store/projectStore'
 import { calculateCostSummary, calculateItemCost } from '@/lib/calculations'
-import { formatCurrency } from '@/lib/utils'
+import { DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
 import { Plus, Trash2, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -28,11 +28,11 @@ export default function CostsTab({ projectId }: Props) {
 
   const summary = calculateCostSummary(
     costItems,
-    financialSettings || { id: '', project_id: projectId, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: 'USD' },
+    financialSettings || { id: '', project_id: projectId, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY },
     risks
   )
 
-  const currency = financialSettings?.currency || 'USD'
+  const currency = financialSettings?.currency || DEFAULT_CURRENCY
   const filteredItems = costItems.filter(i => i.category === activeCategory)
 
   const handleDelete = async (id: string) => {

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
 import { db, supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import i18n from '@/i18n/config'
 import { User, Globe, Bell, Lock, Database } from 'lucide-react'
+import { convertCurrency, CURRENCIES, DEFAULT_CURRENCY } from '@/lib/utils'
+import type { CostItem, FinancialSettings, Project, Risk } from '@/types'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -17,10 +19,30 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [updatingPassword, setUpdatingPassword] = useState(false)
+  const [preferredCurrency, setPreferredCurrency] = useState(localStorage.getItem('preferred_currency') || DEFAULT_CURRENCY)
+  const [updatingCurrency, setUpdatingCurrency] = useState(false)
 
   // Data Portability States
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    const loadCurrencyPreference = async () => {
+      if (!user || localStorage.getItem('preferred_currency')) return
+
+      const { data } = await db
+        .from('projects')
+        .select('financial_settings(currency)')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle()
+
+      const projectCurrency = data?.financial_settings?.[0]?.currency
+      if (projectCurrency) setPreferredCurrency(projectCurrency)
+    }
+
+    loadCurrencyPreference()
+  }, [user])
 
   const handleExportData = async () => {
     setExporting(true)
@@ -115,6 +137,58 @@ export default function SettingsPage() {
     toast.success(`Language changed to ${newLang === 'en' ? 'English' : 'Hindi'}`)
   }
 
+  const convertUserProjectCurrency = async (newCurrency: string) => {
+    if (!user || newCurrency === preferredCurrency) return
+
+    setUpdatingCurrency(true)
+    const { data: projects, error } = await db
+      .from('projects')
+      .select('*, financial_settings(*)')
+      .eq('user_id', user.id)
+
+    if (error) {
+      toast.error('Failed to load projects for currency conversion: ' + error.message)
+      setUpdatingCurrency(false)
+      return
+    }
+
+    for (const project of (projects || []) as (Project & { financial_settings?: FinancialSettings[] })[]) {
+      const currentSettings = project.financial_settings?.[0]
+      const oldCurrency = currentSettings?.currency || preferredCurrency || DEFAULT_CURRENCY
+      if (oldCurrency === newCurrency) continue
+
+      const convertAmount = (value: number | null | undefined) =>
+        value == null ? null : convertCurrency(value, oldCurrency, newCurrency)
+
+      const { data: items } = await db.from('cost_items').select('*').eq('project_id', project.id)
+      await Promise.all(((items || []) as CostItem[]).map((item) =>
+        db.from('cost_items').update({
+          unit_price: convertAmount(item.unit_price),
+          daily_rate: convertAmount(item.daily_rate),
+          rental_cost: convertAmount(item.rental_cost),
+          maintenance: convertAmount(item.maintenance),
+          fuel: convertAmount(item.fuel),
+        }).eq('id', item.id)
+      ))
+
+      const { data: risks } = await db.from('risks').select('*').eq('project_id', project.id)
+      await Promise.all(((risks || []) as Risk[]).map((risk) =>
+        db.from('risks').update({ impact: convertCurrency(risk.impact || 0, oldCurrency, newCurrency) }).eq('id', risk.id)
+      ))
+
+      await db.from('financial_settings').upsert({
+        ...(currentSettings || {}),
+        project_id: project.id,
+        currency: newCurrency,
+      }, { onConflict: 'project_id' })
+    }
+
+    localStorage.setItem('preferred_currency', newCurrency)
+    setPreferredCurrency(newCurrency)
+    toast.success(`Currency changed to ${newCurrency}. Existing project values were converted.`)
+    setUpdatingCurrency(false)
+  }
+
   const sections = [
     { id: 'profile', label: t('settings.profile'), icon: <User size={16} /> },
     { id: 'preferences', label: t('settings.preferences'), icon: <Globe size={16} /> },
@@ -157,10 +231,6 @@ export default function SettingsPage() {
                 <label className="label">{t('settings.email')}</label>
                 <input type="email" className="input max-w-sm" value={user?.email || ''} readOnly disabled />
               </div>
-              <div>
-                <label className="label">Subscription Tier</label>
-                <span className="badge badge-blue capitalize">{profile?.subscription_tier || 'free'}</span>
-              </div>
               <button onClick={handleSaveProfile} disabled={saving} className="btn-primary">
                 {saving ? 'Saving...' : t('settings.save')}
               </button>
@@ -186,6 +256,22 @@ export default function SettingsPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="label">Currency</label>
+                <select
+                  className="input max-w-sm"
+                  value={preferredCurrency}
+                  onChange={(e) => convertUserProjectCurrency(e.target.value)}
+                  disabled={updatingCurrency}
+                >
+                  {CURRENCIES.map(currency => (
+                    <option key={currency} value={currency}>{currency}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-surface-muted mt-2">
+                  Changing currency converts your existing project costs and risk values.
+                </p>
               </div>
             </div>
           )}

@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
 import {
-  FolderOpen, Package, Database, BarChart3, Settings,
-  LogOut, ChevronLeft, ChevronRight, Users, CreditCard,
+  FolderOpen, Package, BarChart3, Settings,
+  LogOut, ChevronLeft, ChevronRight, Users,
   FileText, SlidersHorizontal, Home, Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,7 +20,6 @@ interface NavItem {
 export default function Sidebar() {
   const { t } = useTranslation()
   const { profile, signOut } = useAuthStore()
-  const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
 
   const isAdmin = profile?.role === 'admin'
@@ -28,7 +27,6 @@ export default function Sidebar() {
   const mainNav: NavItem[] = [
     { label: t('nav.projects'), icon: <FolderOpen size={18} />, to: '/projects' },
     { label: t('nav.resources'), icon: <Package size={18} />, to: '/resources' },
-    { label: t('nav.costDatabases'), icon: <Database size={18} />, to: '/cost-databases' },
     { label: t('nav.analytics'), icon: <BarChart3 size={18} />, to: '/analytics' },
     { label: t('nav.settings'), icon: <Settings size={18} />, to: '/settings' },
   ]
@@ -36,7 +34,6 @@ export default function Sidebar() {
   const adminNav: NavItem[] = [
     { label: t('nav.appSettings'), icon: <SlidersHorizontal size={18} />, to: '/admin/settings' },
     { label: t('nav.users'), icon: <Users size={18} />, to: '/admin/users' },
-    { label: t('nav.subscriptions'), icon: <CreditCard size={18} />, to: '/admin/subscriptions' },
     { label: t('nav.projects'), icon: <FolderOpen size={18} />, to: '/admin/projects' },
     { label: t('nav.projectData'), icon: <SlidersHorizontal size={18} />, to: '/admin/project-data' },
     { label: t('nav.auditLogs'), icon: <FileText size={18} />, to: '/admin/audit-logs' },

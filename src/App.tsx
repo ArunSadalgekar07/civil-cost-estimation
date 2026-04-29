@@ -13,19 +13,18 @@ import AuthLayout from '@/components/layout/AuthLayout'
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage'
 import SignupPage from '@/pages/auth/SignupPage'
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 
 // App pages
 import ProjectsPage from '@/pages/projects/ProjectsPage'
 import ProjectDetailPage from '@/pages/projects/ProjectDetailPage'
 import ResourcesPage from '@/pages/resources/ResourcesPage'
-import CostDatabasesPage from '@/pages/cost-databases/CostDatabasesPage'
 import AnalyticsPage from '@/pages/analytics/AnalyticsPage'
 import SettingsPage from '@/pages/settings/SettingsPage'
 import ShareViewPage from '@/pages/share/ShareViewPage'
 
 // Admin pages
 import AdminUsersPage from '@/pages/admin/AdminUsersPage'
-import AdminSubscriptionsPage from '@/pages/admin/AdminSubscriptionsPage'
 import AdminProjectsPage from '@/pages/admin/AdminProjectsPage'
 import AdminProjectDataPage from '@/pages/admin/AdminProjectDataPage'
 import AdminSettingsPage from '@/pages/admin/AdminSettingsPage'
@@ -107,6 +106,7 @@ export default function App() {
         {/* Auth */}
         <Route path="/login" element={<AuthRoute><AuthLayout><LoginPage /></AuthLayout></AuthRoute>} />
         <Route path="/signup" element={<AuthRoute><AuthLayout><SignupPage /></AuthLayout></AuthRoute>} />
+        <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
 
         {/* Public share view */}
         <Route path="/share/:token" element={<ShareViewPage />} />
@@ -117,11 +117,9 @@ export default function App() {
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="resources" element={<ResourcesPage />} />
-          <Route path="cost-databases" element={<CostDatabasesPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="admin/users" element={<AdminUsersPage />} />
-          <Route path="admin/subscriptions" element={<AdminSubscriptionsPage />} />
           <Route path="admin/projects" element={<AdminProjectsPage />} />
           <Route path="admin/project-data" element={<AdminProjectDataPage />} />
           <Route path="admin/settings" element={<AdminSettingsPage />} />

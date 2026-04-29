@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Plus, Search, FolderOpen, Users, MoreHorizontal, Pencil, Trash2, Share2 } from 'lucide-react'
+import { Plus, Search, FolderOpen, MoreHorizontal, Pencil, Trash2, Share2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { formatDate } from '@/lib/utils'
@@ -59,9 +59,7 @@ export default function ProjectsPage() {
         />
       </div>
 
-      {/* Grid: My Projects + Shared With Me */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* My Projects */}
+      <div className="max-w-4xl">
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 text-white font-semibold">
@@ -97,21 +95,6 @@ export default function ProjectsPage() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Shared With Me */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-white font-semibold">
-              <Users size={18} className="text-accent" />
-              {t('projects.sharedWithMe')}
-            </div>
-            <span className="badge badge-blue">0 projects</span>
-          </div>
-          <div className="text-center py-12 text-surface-muted">
-            <Users size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">{t('projects.noSharedProjects')}</p>
-          </div>
         </div>
       </div>
 

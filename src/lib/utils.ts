@@ -5,7 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number, currency = 'USD', locale = 'en-US'): string {
+export const DEFAULT_CURRENCY = 'INR'
+
+export function formatCurrency(amount: number, currency = DEFAULT_CURRENCY, locale = 'en-US'): string {
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -20,7 +22,7 @@ export function formatCurrency(amount: number, currency = 'USD', locale = 'en-US
   }
 }
 
-export function formatPdfCurrency(amount: number, currency = 'USD', locale = 'en-US'): string {
+export function formatPdfCurrency(amount: number, currency = DEFAULT_CURRENCY, locale = 'en-US'): string {
   const formatted = formatCurrency(amount, currency, locale)
   // The built-in PDF Helvetica font does not support the '₹' glyph and renders it as '1' or '?'
   return formatted.replace('₹', 'Rs. ')
@@ -48,6 +50,12 @@ export function generateShareToken(): string {
   return Array.from(array, b => b.toString(16).padStart(2, '0')).join('')
 }
 
+export async function sha256(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('')
+}
+
 export function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str
   return str.slice(0, maxLength) + '...'
@@ -72,7 +80,7 @@ export const PROJECT_TYPES = [
 export const SIZE_UNITS = ['Square Meters', 'Square Feet', 'Hectares', 'Acres']
 export const DURATION_UNITS = ['Days', 'Weeks', 'Months', 'Years']
 export const COST_CATEGORIES = ['materials', 'labor', 'equipment', 'additional'] as const
-export const CURRENCIES = ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'EGP', 'YER', 'KWD', 'QAR', 'INR']
+export const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'EGP', 'YER', 'KWD', 'QAR']
 
 export const CURRENCY_RATES: Record<string, number> = {
   USD: 1, EUR: 0.92, GBP: 0.79, SAR: 3.75, AED: 3.67,

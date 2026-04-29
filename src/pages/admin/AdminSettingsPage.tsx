@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Settings } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/lib/supabase'
+import { DEFAULT_CURRENCY } from '@/lib/utils'
 
 export default function AdminSettingsPage() {
   const [appName, setAppName] = useState('Construction Cost Estimator')
-  const [defaultCurrency, setDefaultCurrency] = useState('USD')
+  const [defaultCurrency, setDefaultCurrency] = useState(DEFAULT_CURRENCY)
   const [defaultLanguage, setDefaultLanguage] = useState('en')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -16,7 +17,7 @@ export default function AdminSettingsPage() {
       if (data) {
         data.forEach((setting: any) => {
           if (setting.key === 'app_name') setAppName(setting.value || 'Construction Cost Estimator')
-          if (setting.key === 'default_currency') setDefaultCurrency(setting.value || 'USD')
+          if (setting.key === 'default_currency') setDefaultCurrency(setting.value || DEFAULT_CURRENCY)
           if (setting.key === 'default_language') setDefaultLanguage(setting.value || 'en')
         })
       }

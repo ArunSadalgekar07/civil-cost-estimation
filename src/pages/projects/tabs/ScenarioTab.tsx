@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import { calculateCostSummary, simulateScenario } from '@/lib/calculations'
-import { formatCurrency } from '@/lib/utils'
+import { DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
 import { Play, RefreshCw } from 'lucide-react'
 
 interface Props { projectId: string }
@@ -20,10 +20,10 @@ export default function ScenarioTab({ projectId }: Props) {
   const [simResult, setSimResult] = useState<ReturnType<typeof simulateScenario> | null>(null)
   const [simulating, setSimulating] = useState(false)
 
-  const currency = financialSettings?.currency || 'USD'
+  const currency = financialSettings?.currency || DEFAULT_CURRENCY
   const baseSummary = calculateCostSummary(
     costItems,
-    financialSettings || { id: '', project_id: projectId, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: 'USD' },
+    financialSettings || { id: '', project_id: projectId, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY },
     risks
   )
 

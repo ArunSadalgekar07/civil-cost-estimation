@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { X, Copy, Check, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { generateShareToken } from '@/lib/utils'
+import { db } from '@/lib/supabase'
+import { generateShareToken, sha256 } from '@/lib/utils'
 import { auditLogger } from '@/lib/auditLogger'
 import { useAuthStore } from '@/store/authStore'
 import type { Project } from '@/types'
@@ -17,11 +18,49 @@ export default function ShareModal({ project, onClose }: Props) {
   const [copied, setCopied] = useState(false)
   const [password, setPassword] = useState('')
   const [expiry, setExpiry] = useState('7d')
+  const [savedUrl, setSavedUrl] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const shareUrl = `${window.location.origin}/share/${token}`
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(shareUrl)
+  const getExpiryDate = () => {
+    if (!expiry) return null
+    const expiresAt = new Date()
+    const days = expiry === '1d' ? 1 : expiry === '30d' ? 30 : 7
+    expiresAt.setDate(expiresAt.getDate() + days)
+    return expiresAt.toISOString()
+  }
+
+  const saveLink = async () => {
+    if (savedUrl) return savedUrl
+
+    setSaving(true)
+    const passwordHash = password ? await sha256(password) : null
+    const { error } = await db.from('shared_projects').insert({
+      project_id: project.id,
+      share_token: token,
+      password_hash: passwordHash,
+      expires_at: getExpiryDate(),
+    })
+
+    setSaving(false)
+
+    if (error) {
+      toast.error(`Failed to save share link: ${error.message}`)
+      return ''
+    }
+
+    if (user) auditLogger.logShareLinkGenerated(user.id, project.id)
+    setSavedUrl(shareUrl)
+    toast.success('Share link saved!')
+    return shareUrl
+  }
+
+  const copyLink = async () => {
+    const url = await saveLink()
+    if (!url) return
+
+    navigator.clipboard.writeText(url)
     setCopied(true)
     toast.success('Link copied!')
     setTimeout(() => setCopied(false), 2000)
@@ -47,10 +86,10 @@ export default function ShareModal({ project, onClose }: Props) {
             <div className="flex gap-2">
               <input
                 readOnly
-                value={shareUrl}
+                value={savedUrl || shareUrl}
                 className="input text-xs flex-1"
               />
-              <button onClick={copyLink} className="btn-primary btn-sm px-3">
+              <button onClick={copyLink} disabled={saving} className="btn-primary btn-sm px-3">
                 {copied ? <Check size={14} /> : <Copy size={14} />}
               </button>
             </div>
@@ -65,13 +104,14 @@ export default function ShareModal({ project, onClose }: Props) {
               placeholder="Leave empty for public access"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              disabled={!!savedUrl}
             />
           </div>
 
           {/* Expiry */}
           <div>
             <label className="label">Link Expires In</label>
-            <select className="input" value={expiry} onChange={e => setExpiry(e.target.value)}>
+            <select className="input" value={expiry} onChange={e => setExpiry(e.target.value)} disabled={!!savedUrl}>
               <option value="1d">1 Day</option>
               <option value="7d">7 Days</option>
               <option value="30d">30 Days</option>
@@ -79,24 +119,10 @@ export default function ShareModal({ project, onClose }: Props) {
             </select>
           </div>
 
-          <button className="btn-primary w-full" onClick={() => { 
-            if (user) auditLogger.logShareLinkGenerated(user.id, project.id)
-            toast.success('Share link generated!') 
-          }}>
-            Generate & Save Link
+          <button className="btn-primary w-full" onClick={saveLink} disabled={saving || !!savedUrl}>
+            {saving ? 'Saving...' : savedUrl ? 'Link Saved' : 'Generate & Save Link'}
           </button>
 
-          <div className="border-t border-surface-border pt-4">
-            <p className="text-sm font-medium text-white mb-3">Internal Sharing</p>
-            <div className="flex gap-2">
-              <input type="email" className="input flex-1" placeholder="Invite by email..." />
-              <select className="input w-28">
-                <option>View</option>
-                <option>Edit</option>
-              </select>
-              <button className="btn-outline btn-sm">Invite</button>
-            </div>
-          </div>
         </div>
 
         <div className="flex justify-end p-5 border-t border-surface-border">

@@ -3,11 +3,11 @@ import { X, Search, Lock } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import { useProjectStore } from '@/store/projectStore'
 import { useAuthStore } from '@/store/authStore'
-import { cn } from '@/lib/utils'
+import { cn, convertCurrency, DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { CostItem, CostCategory, Resource } from '@/types'
 
-type LibraryResource = Pick<Resource, 'id' | 'name' | 'description' | 'unit' | 'unit_price'> & {
+type LibraryResource = Pick<Resource, 'id' | 'name' | 'description' | 'unit' | 'unit_price' | 'currency'> & {
   profiles?: {
     role?: 'admin' | 'user'
   } | null
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default function CostItemFormModal({ projectId, category, item, onClose }: Props) {
-  const { createCostItem, updateCostItem } = useProjectStore()
+  const { createCostItem, updateCostItem, financialSettings } = useProjectStore()
   const { profile } = useAuthStore()
   const isAdmin = profile?.role === 'admin'
   const [loading, setLoading] = useState(false)
@@ -92,11 +92,14 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
 
   const handleSelectLibraryItem = (selectedItem: LibraryResource) => {
     setSelectedLibraryItemId(selectedItem.id)
+    const projectCurrency = financialSettings?.currency || DEFAULT_CURRENCY
+    const resourceCurrency = selectedItem.currency || DEFAULT_CURRENCY
+    const convertedUnitPrice = convertCurrency(selectedItem.unit_price || 0, resourceCurrency, projectCurrency)
     setForm((currentForm) => ({
       ...currentForm,
       name: selectedItem.name,
       unit: selectedItem.unit || '',
-      unit_price: selectedItem.unit_price?.toString() || '0',
+      unit_price: convertedUnitPrice.toFixed(2),
       notes: selectedItem.description || ''
     }))
     setShowLibrary(false)
@@ -217,7 +220,7 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
                       <div className="font-medium text-white text-sm">{lib.name}</div>
                       <div className="text-[10px] text-surface-muted flex gap-2">
                         {lib.unit && <span>Unit: {lib.unit}</span>}
-                        {lib.unit_price > 0 && <span>Price: {lib.unit_price}</span>}
+                        {lib.unit_price > 0 && <span>Price: {formatCurrency(lib.unit_price, lib.currency || DEFAULT_CURRENCY)}</span>}
                       </div>
                     </button>
                   ))}

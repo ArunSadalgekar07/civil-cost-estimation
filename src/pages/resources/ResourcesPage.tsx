@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Plus, Search, Pencil, Copy, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Resource } from '@/types'
-import { formatCurrency, cn } from '@/lib/utils'
+import { DEFAULT_CURRENCY, formatCurrency, cn } from '@/lib/utils'
 
 type ResourceCategory = 'materials' | 'labor' | 'equipment' | 'assemblies'
 type ResourceWithOwnerRole = Resource & {
@@ -47,10 +47,7 @@ export default function ResourcesPage() {
     if (error) {
       console.error('Fetch error:', error)
       const { data: fallbackData } = await db.from('resources').select('*').eq('category', activeTab)
-      const fallbackResources = ((fallbackData || []) as Resource[]).filter((resource) =>
-        isAdmin || resource.user_id === user.id
-      )
-      setResources(fallbackResources)
+      setResources((fallbackData || []) as Resource[])
     } else {
       const filtered = ((data || []) as ResourceWithOwnerRole[]).filter((resource) =>
         isAdmin || resource.user_id === user.id || resource.profiles?.role === 'admin'
@@ -89,7 +86,7 @@ export default function ResourcesPage() {
       description: form.description || null,
       unit: form.unit || null,
       unit_price: Number(form.unit_price) || 0,
-      currency: 'USD',
+      currency: DEFAULT_CURRENCY,
     }
 
     if (editItem) {
@@ -187,7 +184,7 @@ export default function ResourcesPage() {
                 <th>{t('resources.name')}</th>
                 <th>{t('resources.description')}</th>
                 <th>{t('resources.unit')}</th>
-                <th>{t('resources.unitPrice')} (USD)</th>
+                <th>{t('resources.unitPrice')}</th>
                 <th>{t('resources.actions')}</th>
               </tr>
             </thead>
@@ -200,7 +197,7 @@ export default function ResourcesPage() {
                   <td className="font-medium">{resource.name}</td>
                   <td className="text-surface-muted text-sm">{resource.description || <span className="italic opacity-50">No description</span>}</td>
                   <td>{resource.unit || '-'}</td>
-                  <td>{formatCurrency(resource.unit_price, 'USD')}</td>
+                  <td>{formatCurrency(resource.unit_price, resource.currency || DEFAULT_CURRENCY)}</td>
                   <td>
                     {isAdmin && (
                       <div className="flex items-center gap-1">
@@ -239,7 +236,7 @@ export default function ResourcesPage() {
                   <input type="text" className="input" placeholder="kg, m2, bag, ton" value={form.unit} onChange={(e) => setForm((currentForm) => ({ ...currentForm, unit: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="label">Unit Price (USD)</label>
+                  <label className="label">Unit Price ({DEFAULT_CURRENCY})</label>
                   <input type="number" className="input" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm((currentForm) => ({ ...currentForm, unit_price: e.target.value }))} />
                 </div>
               </div>

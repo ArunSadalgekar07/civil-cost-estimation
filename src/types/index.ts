@@ -5,7 +5,6 @@ export interface Profile {
   full_name: string | null
   role: 'admin' | 'user'
   avatar_url: string | null
-  subscription_tier: 'free' | 'pro' | 'enterprise'
   created_at: string
 }
 
@@ -131,16 +130,6 @@ export interface AuditLog {
   entity_type: string
   entity_id: string | null
   metadata: Record<string, unknown>
-  created_at: string
-  profile?: Profile
-}
-
-export interface Subscription {
-  id: string
-  user_id: string
-  tier: 'free' | 'pro' | 'enterprise'
-  status: 'active' | 'inactive' | 'expired'
-  expires_at: string | null
   created_at: string
   profile?: Profile
 }

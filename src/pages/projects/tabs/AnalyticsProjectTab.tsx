@@ -1,13 +1,13 @@
 import ReactECharts from 'echarts-for-react'
 import { useProjectStore } from '@/store/projectStore'
 import { calculateCostSummary } from '@/lib/calculations'
-import { formatCurrency } from '@/lib/utils'
+import { DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
 
 interface Props { projectId: string }
 
 export default function AnalyticsProjectTab({ projectId }: Props) {
   const { costItems, risks, financialSettings } = useProjectStore()
-  const currency = financialSettings?.currency || 'USD'
+  const currency = financialSettings?.currency || DEFAULT_CURRENCY
   
   let currencySymbol = '$'
   try {
@@ -18,7 +18,7 @@ export default function AnalyticsProjectTab({ projectId }: Props) {
 
   const summary = calculateCostSummary(
     costItems,
-    financialSettings || { id: '', project_id: projectId, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: 'USD' },
+    financialSettings || { id: '', project_id: projectId, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY },
     risks
   )
 

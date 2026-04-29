@@ -11,7 +11,6 @@ export type Database = {
           full_name: string | null
           role: string
           avatar_url: string | null
-          subscription_tier: string
           created_at: string
         }
         Insert: {
@@ -19,7 +18,6 @@ export type Database = {
           full_name?: string | null
           role?: string
           avatar_url?: string | null
-          subscription_tier?: string
           created_at?: string
         }
         Update: {
@@ -27,7 +25,6 @@ export type Database = {
           full_name?: string | null
           role?: string
           avatar_url?: string | null
-          subscription_tier?: string
           created_at?: string
         }
       }
@@ -363,32 +360,6 @@ export type Database = {
           entity_type?: string | null
           entity_id?: string | null
           metadata?: Json | null
-          created_at?: string
-        }
-      }
-      subscriptions: {
-        Row: {
-          id: string
-          user_id: string
-          tier: string
-          status: string
-          expires_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          tier?: string
-          status?: string
-          expires_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          tier?: string
-          status?: string
-          expires_at?: string | null
           created_at?: string
         }
       }

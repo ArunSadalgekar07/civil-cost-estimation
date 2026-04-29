@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/lib/supabase'
+import { convertCurrency, DEFAULT_CURRENCY } from '@/lib/utils'
 import type { Project, CostItem, Risk, FinancialSettings } from '@/types'
 
 interface ProjectState {
@@ -42,7 +43,7 @@ const defaultFinancial: FinancialSettings = {
   contingency_pct: 5,
   markup_pct: 15,
   tax_pct: 5,
-  currency: 'USD',
+  currency: DEFAULT_CURRENCY,
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -215,7 +216,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   updateFinancialSettings: async (projectId: string, data: Partial<FinancialSettings>) => {
-    const payload = { ...get().financialSettings, ...data, project_id: projectId }
+    const currentSettings = get().financialSettings
+    const previousCurrency = currentSettings?.currency || defaultFinancial.currency
+    const nextCurrency = data.currency || previousCurrency
+    const shouldConvertValues = previousCurrency !== nextCurrency
+    const convertAmount = (value: number | null | undefined) =>
+      value == null ? null : convertCurrency(value, previousCurrency, nextCurrency)
+
+    if (shouldConvertValues) {
+      const { data: storedItems } = await db.from('cost_items').select('*').eq('project_id', projectId)
+      await Promise.all(((storedItems || []) as CostItem[]).map((item) =>
+        db.from('cost_items').update({
+          unit_price: convertAmount(item.unit_price),
+          daily_rate: convertAmount(item.daily_rate),
+          rental_cost: convertAmount(item.rental_cost),
+          maintenance: convertAmount(item.maintenance),
+          fuel: convertAmount(item.fuel),
+        }).eq('id', item.id)
+      ))
+
+      const { data: storedRisks } = await db.from('risks').select('*').eq('project_id', projectId)
+      await Promise.all(((storedRisks || []) as Risk[]).map((risk) =>
+        db.from('risks').update({ impact: convertCurrency(risk.impact || 0, previousCurrency, nextCurrency) }).eq('id', risk.id)
+      ))
+    }
+
+    const payload = { ...currentSettings, ...data, project_id: projectId }
     if (!payload.id) delete payload.id // Remove empty id so DB natively handles it
     
     const { data: result, error } = await db
@@ -227,7 +253,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (error) {
       console.error("Failed to save financial settings:", error)
     } else if (result) {
-      set({ financialSettings: result as FinancialSettings })
+      set((state) => ({
+        financialSettings: result as FinancialSettings,
+        costItems: shouldConvertValues
+          ? state.costItems.map((item) => ({
+              ...item,
+              unit_price: convertAmount(item.unit_price),
+              daily_rate: convertAmount(item.daily_rate),
+              rental_cost: convertAmount(item.rental_cost),
+              maintenance: convertAmount(item.maintenance),
+              fuel: convertAmount(item.fuel),
+            }))
+          : state.costItems,
+        risks: shouldConvertValues
+          ? state.risks.map((risk) => ({ ...risk, impact: convertCurrency(risk.impact || 0, previousCurrency, nextCurrency) }))
+          : state.risks,
+      }))
     }
   },
 }))

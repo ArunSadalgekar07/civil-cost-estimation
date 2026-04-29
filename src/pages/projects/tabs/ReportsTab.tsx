@@ -2,6 +2,7 @@ import { FileText, Download, FileCheck } from 'lucide-react'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import type { Project } from '@/types'
 import { useProjectStore } from '@/store/projectStore'
+import { DEFAULT_CURRENCY } from '@/lib/utils'
 import { calculateCostSummary } from '@/lib/calculations'
 import CostProposalPDF from '@/components/reports/CostProposalPDF'
 import CostBreakdownPDF from '@/components/reports/CostBreakdownPDF'
@@ -10,11 +11,11 @@ interface Props { project: Project }
 
 export default function ReportsTab({ project }: Props) {
   const { costItems, risks, financialSettings } = useProjectStore()
-  const currency = financialSettings?.currency || 'USD'
+  const currency = financialSettings?.currency || DEFAULT_CURRENCY
 
   const summary = calculateCostSummary(
     costItems,
-    financialSettings || { id: '', project_id: project.id, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: 'USD' },
+    financialSettings || { id: '', project_id: project.id, overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY },
     risks
   )
 
@@ -73,4 +74,3 @@ export default function ReportsTab({ project }: Props) {
     </div>
   )
 }
-
