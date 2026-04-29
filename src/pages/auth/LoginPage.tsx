@@ -126,23 +126,6 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-surface-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-surface px-4 py-1 text-surface-muted rounded">{t('auth.or')}</span>
-        </div>
-      </div>
-
-      <button
-        onClick={handleDemoLogin}
-        disabled={loading}
-        className="btn-outline w-full py-2.5"
-      >
-        Try Demo Account
-      </button>
-
       <p className="text-center text-sm text-surface-muted mt-6">
         {t('auth.noAccount')}{' '}
         <Link to="/signup" className="text-accent hover:underline font-medium">

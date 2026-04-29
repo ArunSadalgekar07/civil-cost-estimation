@@ -4,16 +4,13 @@ import { calculateCostSummary } from '@/lib/calculations'
 import { formatCurrency } from '@/lib/utils'
 import { useSystemStore } from '@/store/systemStore'
 import { toast } from 'sonner'
-import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
-import { Settings, Calculator, Building2 } from 'lucide-react'
 
 interface Props { projectId: string }
 
 export default function PricingTab({ projectId }: Props) {
-  const { t } = useTranslation()
-  const { user } = useAuthStore()
-  const { costItems, risks, financialSettings, updateFinancialSettings } = useProjectStore()
+  const { user, profile } = useAuthStore()
+  const { currentProject, costItems, risks, financialSettings, updateFinancialSettings } = useProjectStore()
   const { currencies } = useSystemStore()
   
   const [settings, setSettings] = useState(financialSettings || {
@@ -26,7 +23,7 @@ export default function PricingTab({ projectId }: Props) {
     if (financialSettings) setSettings(financialSettings)
   }, [financialSettings])
 
-  const isOwner = user?.role === 'admin' || user?.role === 'owner'
+  const canEdit = profile?.role === 'admin' || currentProject?.user_id === user?.id
   const summary = calculateCostSummary(costItems, settings, risks)
 
   const handleSave = async () => {
@@ -54,7 +51,7 @@ export default function PricingTab({ projectId }: Props) {
             value={settings.currency}
             onChange={e => setSettings({ ...settings, currency: e.target.value })}
             className="input"
-            disabled={!isOwner}
+            disabled={!canEdit}
           >
             {currencies.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -78,7 +75,7 @@ export default function PricingTab({ projectId }: Props) {
               value={value}
               onChange={e => onChange(Number(e.target.value))}
               className="w-full accent-accent"
-              disabled={!isOwner}
+              disabled={!canEdit}
             />
             <input
               type="number"
@@ -87,12 +84,12 @@ export default function PricingTab({ projectId }: Props) {
               value={value}
               onChange={e => onChange(Number(e.target.value))}
               className="input mt-2 w-28"
-              disabled={!isOwner}
+              disabled={!canEdit}
             />
           </div>
         )})}
 
-        {isOwner && (
+        {canEdit && (
           <button onClick={handleSave} disabled={saving} className="btn-primary w-full">
             {saving ? 'Saving...' : 'Save Settings'}
           </button>

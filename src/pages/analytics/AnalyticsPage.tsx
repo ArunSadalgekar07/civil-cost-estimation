@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactECharts from 'echarts-for-react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts'
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { useSystemStore } from '@/store/systemStore'
@@ -88,7 +87,7 @@ export default function AnalyticsPage() {
   let currencySymbol = '$'
   try {
     currencySymbol = new Intl.NumberFormat('en-US', { style: 'currency', currency: selectedCurrency }).formatToParts(0).find(p => p.type === 'currency')?.value || '$'
-  } catch (e) {
+  } catch {
     currencySymbol = selectedCurrency
   }
 

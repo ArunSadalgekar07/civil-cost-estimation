@@ -11,6 +11,8 @@ export interface CostSummary {
   subtotal: number
   markup: number
   tax: number
+  subtotalBeforeTax: number
+  totalPrice: number
   grandTotal: number
   riskContingency: number
 }
@@ -84,8 +86,10 @@ export function calculateCostSummary(
     contingency,
     subtotal,
     markup,
+    subtotalBeforeTax: subtotal + markup,
     tax,
-    grandTotal,
+    totalPrice: subtotal + markup + tax,
+    grandTotal: subtotal + markup + tax,
     riskContingency,
   }
 }

@@ -3,6 +3,7 @@ import { db } from '@/lib/supabase'
 import { FolderOpen, Search, ArrowRight } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
+import type { Profile, Project } from '@/types'
 
 interface MergedProject {
   id: string
@@ -30,11 +31,11 @@ export default function AdminProjectsPage() {
       db.from('profiles').select('id, full_name')
     ])
 
-    const projectsData = projectsRes.data || []
-    const profilesData = profilesRes.data || []
+    const projectsData = (projectsRes.data || []) as Pick<Project, 'id' | 'name' | 'user_id' | 'type' | 'location' | 'status' | 'created_at'>[]
+    const profilesData = (profilesRes.data || []) as Pick<Profile, 'id' | 'full_name'>[]
 
-    const merged = projectsData.map(proj => {
-      const owner = profilesData.find(p => p.id === proj.user_id)
+    const merged = projectsData.map((proj) => {
+      const owner = profilesData.find((profile) => profile.id === proj.user_id)
       return {
         id: proj.id,
         name: proj.name,

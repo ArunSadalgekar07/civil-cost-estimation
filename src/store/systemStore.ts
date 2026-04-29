@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { db } from '@/lib/supabase'
 
+interface AppSettingRow {
+  key: string
+  value: string | null
+}
+
 interface SystemState {
   projectTypes: string[]
   sizeUnits: string[]
@@ -21,7 +26,7 @@ const DEFAULT_DEFS = {
   currencies: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'EGP', 'YER', 'KWD', 'QAR', 'INR']
 }
 
-export const useSystemStore = create<SystemState>((set, get) => ({
+export const useSystemStore = create<SystemState>((set) => ({
   ...DEFAULT_DEFS,
   loading: true,
 
@@ -31,7 +36,7 @@ export const useSystemStore = create<SystemState>((set, get) => ({
       if (error) throw error
       
       const loaded: Partial<SystemState> = {}
-      data?.forEach(row => {
+      data?.forEach((row: AppSettingRow) => {
         try {
           const parsed = JSON.parse(row.value || '[]')
           if (row.key === 'dict_project_types') loaded.projectTypes = parsed
@@ -39,7 +44,7 @@ export const useSystemStore = create<SystemState>((set, get) => ({
           if (row.key === 'dict_duration_units') loaded.durationUnits = parsed
           if (row.key === 'dict_cost_categories') loaded.costCategories = parsed
           if (row.key === 'dict_currencies') loaded.currencies = parsed
-        } catch(e) {
+        } catch {
           console.warn('Failed parsing dictionary array for: ', row.key)
         }
       })

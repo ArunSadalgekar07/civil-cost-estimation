@@ -18,7 +18,8 @@ interface CostDatabaseItem {
 
 export default function CostDatabasesPage() {
   const { t } = useTranslation()
-  const { user } = useAuthStore()
+  const { user, profile } = useAuthStore()
+  const isAdmin = profile?.role === 'admin'
   const { currencies } = useSystemStore()
   const [databases, setDatabases] = useState<CostDatabaseItem[]>([])
   const [search, setSearch] = useState('')
@@ -32,10 +33,15 @@ export default function CostDatabasesPage() {
     setLoading(true)
     const { data } = await db
       .from('cost_databases')
-      .select('*')
-      .eq('user_id', user.id)
+      .select('*, profiles:user_id(role)')
       .order('created_at', { ascending: false })
-    setDatabases((data || []) as CostDatabaseItem[])
+
+    // If admin: see all. If user: see own + admins.
+    const filtered = data?.filter((db: any) => 
+      db.user_id === user.id || db.profiles?.role === 'admin'
+    ) || []
+
+    setDatabases(filtered as CostDatabaseItem[])
     setLoading(false)
   }
 
@@ -73,9 +79,11 @@ export default function CostDatabasesPage() {
           <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-surface-muted" />
           <input type="text" className="input ps-9" placeholder="Search databases..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary btn-sm">
-          <Plus size={14} /> {t('costDatabases.add')}
-        </button>
+        {isAdmin && (
+          <button onClick={() => setShowForm(true)} className="btn-primary btn-sm">
+            <Plus size={14} /> {t('costDatabases.add')}
+          </button>
+        )}
       </div>
 
       <div className="table-container">
@@ -113,10 +121,14 @@ export default function CostDatabasesPage() {
                     <button className="btn btn-ghost p-1 gap-1 text-xs">
                       <Eye size={12} /> {t('costDatabases.view')}
                     </button>
-                    <button className="btn btn-ghost p-1"><Pencil size={12} /></button>
-                    <button onClick={() => handleDelete(db_item.id)} className="btn btn-ghost p-1 hover:text-danger">
-                      <Trash2 size={12} />
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <button className="btn btn-ghost p-1"><Pencil size={12} /></button>
+                        <button onClick={() => handleDelete(db_item.id)} className="btn btn-ghost p-1 hover:text-danger">
+                          <Trash2 size={12} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

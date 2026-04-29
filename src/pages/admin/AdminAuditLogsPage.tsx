@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { db } from '@/lib/supabase'
 import { FileText } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import type { AuditLog, Profile } from '@/types'
+
+type AuditLogWithProfile = AuditLog & {
+  profiles?: Pick<Profile, 'id' | 'full_name' | 'role'>
+}
 
 export default function AdminAuditLogsPage() {
-  const [logs, setLogs] = useState<{ 
-    id: string; action: string; entity_type: string; created_at: string;
-    profiles?: { full_name: string; role?: string; id: string; }
-  }[]>([])
+  const [logs, setLogs] = useState<AuditLogWithProfile[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,23 +20,30 @@ export default function AdminAuditLogsPage() {
         return
       }
 
-      const userIds = [...new Set(logsData.map(l => l.user_id).filter(Boolean))]
-      let profilesMap: Record<string, { full_name: string; role?: string; id: string; }> = {}
+      const typedLogs = logsData as AuditLog[]
+      const userIds = [...new Set(typedLogs.map((log) => log.user_id).filter(Boolean))]
+      let profilesMap: Record<string, Pick<Profile, 'id' | 'full_name' | 'role'>> = {}
 
       if (userIds.length > 0) {
         // Only select available schema fields to prevent hard crashes
         const { data: profilesData } = await db.from('profiles').select('id, full_name, role').in('id', userIds)
         if (profilesData) {
-          profilesMap = profilesData.reduce((acc, p) => ({ ...acc, [p.id]: p }), {})
+          profilesMap = (profilesData as Pick<Profile, 'id' | 'full_name' | 'role'>[]).reduce<Record<string, Pick<Profile, 'id' | 'full_name' | 'role'>>>(
+            (acc, profile) => {
+              acc[profile.id] = profile
+              return acc
+            },
+            {}
+          )
         }
       }
 
-      const merged = logsData.map(log => ({
+      const merged = typedLogs.map((log) => ({
         ...log,
         profiles: log.user_id ? profilesMap[log.user_id] : undefined
       }))
 
-      setLogs(merged as typeof logs)
+      setLogs(merged)
       setLoading(false)
     }
     fetch()

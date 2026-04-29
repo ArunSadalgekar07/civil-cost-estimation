@@ -3,6 +3,7 @@ import { CreditCard, Search, X } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
+import type { Profile, Subscription } from '@/types'
 
 interface MergedSubscription {
   id: string
@@ -34,19 +35,21 @@ export default function AdminSubscriptionsPage() {
       db.from('profiles').select('id, full_name, subscription_tier')
     ])
 
-    const subsData = subsRes.data || []
-    const profsData = profilesRes.data || []
+    const subsData = (subsRes.data || []) as Subscription[]
+    const profsData = (profilesRes.data || []) as Pick<Profile, 'id' | 'full_name' | 'subscription_tier'>[]
 
-    const merged = profsData.map(p => {
+    const merged = profsData.map((profile) => {
       // Find latest subscription for the user
-      const matchingSubs = subsData.filter(s => s.user_id === p.id).sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      const matchingSubs = subsData
+        .filter((subscription) => subscription.user_id === profile.id)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       const activeSub = matchingSubs[0]
 
       return {
         id: activeSub?.id || '',
-        user_id: p.id,
-        user_name: p.full_name || 'Unnamed User',
-        tier: activeSub?.tier || p.subscription_tier || 'free',
+        user_id: profile.id,
+        user_name: profile.full_name || 'Unnamed User',
+        tier: activeSub?.tier || profile.subscription_tier || 'free',
         status: activeSub?.status || 'inactive',
         expires_at: activeSub?.expires_at || null,
         created_at: activeSub?.created_at || new Date().toISOString()
@@ -96,9 +99,9 @@ export default function AdminSubscriptionsPage() {
       toast.success('Subscription plan successfully updated!')
       setSelectedSub(null)
       fetchData()
-    } catch (e: any) {
+    } catch (error) {
       toast.error('Operation failed')
-      console.error(e)
+      console.error(error)
     }
 
     setSaving(false)

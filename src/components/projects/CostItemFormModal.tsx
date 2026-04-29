@@ -1,8 +1,17 @@
-import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { X, Search, Lock } from 'lucide-react'
+import { db } from '@/lib/supabase'
 import { useProjectStore } from '@/store/projectStore'
+import { useAuthStore } from '@/store/authStore'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { CostItem, CostCategory } from '@/types'
+import type { CostItem, CostCategory, Resource } from '@/types'
+
+type LibraryResource = Pick<Resource, 'id' | 'name' | 'description' | 'unit' | 'unit_price'> & {
+  profiles?: {
+    role?: 'admin' | 'user'
+  } | null
+}
 
 interface Props {
   projectId: string
@@ -13,7 +22,13 @@ interface Props {
 
 export default function CostItemFormModal({ projectId, category, item, onClose }: Props) {
   const { createCostItem, updateCostItem } = useProjectStore()
+  const { profile } = useAuthStore()
+  const isAdmin = profile?.role === 'admin'
   const [loading, setLoading] = useState(false)
+  const [libraryItems, setLibraryItems] = useState<LibraryResource[]>([])
+  const [searchLibrary, setSearchLibrary] = useState('')
+  const [showLibrary, setShowLibrary] = useState(false)
+  const [selectedLibraryItemId, setSelectedLibraryItemId] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     name: item?.name || '',
@@ -29,9 +44,77 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
     notes: item?.notes || '',
   })
 
+  useEffect(() => {
+    const fetchLibrary = async () => {
+      const { data, error } = await db.from('resources')
+        .select(`
+          *,
+          profiles:user_id (
+            role
+          )
+        `)
+        .eq('category', category)
+
+      if (error) {
+        console.error('Library fetch error:', error)
+        const { data: simpleData } = await db.from('resources').select('*').eq('category', category)
+        setLibraryItems((simpleData || []) as LibraryResource[])
+      } else {
+        const filtered = ((data || []) as LibraryResource[]).filter((resource) => isAdmin || resource.profiles?.role === 'admin')
+        setLibraryItems(filtered)
+      }
+
+      if (!isAdmin && !item) {
+        setShowLibrary(true)
+      }
+    }
+
+    fetchLibrary()
+  }, [category, isAdmin, item])
+
+  const filteredLibrary = useMemo(() => {
+    return libraryItems.filter((libraryItem) =>
+      libraryItem.name.toLowerCase().includes(searchLibrary.toLowerCase())
+    )
+  }, [libraryItems, searchLibrary])
+
+  const hasValidLibrarySelection = useMemo(() => {
+    if (isAdmin) return true
+    if (selectedLibraryItemId) return true
+    if (!item) return false
+
+    return libraryItems.some((libraryItem) =>
+      libraryItem.name === form.name &&
+      (libraryItem.unit || '') === form.unit &&
+      String(libraryItem.unit_price ?? 0) === String(form.unit_price || '0')
+    )
+  }, [form.name, form.unit, form.unit_price, isAdmin, item, libraryItems, selectedLibraryItemId])
+
+  const handleSelectLibraryItem = (selectedItem: LibraryResource) => {
+    setSelectedLibraryItemId(selectedItem.id)
+    setForm((currentForm) => ({
+      ...currentForm,
+      name: selectedItem.name,
+      unit: selectedItem.unit || '',
+      unit_price: selectedItem.unit_price?.toString() || '0',
+      notes: selectedItem.description || ''
+    }))
+    setShowLibrary(false)
+    toast.success(`${selectedItem.name} selected from library`)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) { toast.error('Name is required'); return }
+    if (!form.name.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    if (!isAdmin && !hasValidLibrarySelection) {
+      toast.error('Users must pick an item from the admin library.')
+      setShowLibrary(true)
+      return
+    }
+
     setLoading(true)
 
     const data: Partial<CostItem> = {
@@ -57,12 +140,16 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
       await createCostItem(data)
       toast.success('Item added')
     }
+
     setLoading(false)
     onClose()
   }
 
   const categoryLabel: Record<CostCategory, string> = {
-    materials: 'Material', labor: 'Labor', equipment: 'Equipment', additional: 'Additional Cost'
+    materials: 'Material',
+    labor: 'Labor',
+    equipment: 'Equipment',
+    additional: 'Additional Cost'
   }
 
   return (
@@ -74,24 +161,114 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="label">Name *</label>
-            <input type="text" className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="Item name" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="label mb-0">Name *</label>
+              <button
+                type="button"
+                onClick={() => setShowLibrary(!showLibrary)}
+                className="text-xs text-accent flex items-center gap-1 hover:underline"
+              >
+                <Search size={10} /> {isAdmin ? 'Search from Library' : 'Pick from Admin Library'}
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                className={cn('input', !isAdmin && 'bg-surface/50 cursor-not-allowed')}
+                value={form.name}
+                onChange={(e) => {
+                  if (!isAdmin) return
+                  setSelectedLibraryItemId(null)
+                  setForm((currentForm) => ({ ...currentForm, name: e.target.value }))
+                }}
+                required
+                placeholder={isAdmin ? 'Item name' : 'Please pick from library'}
+                readOnly={!isAdmin}
+              />
+              {!isAdmin && <Lock size={12} className="absolute end-3 top-1/2 -translate-y-1/2 text-surface-muted opacity-50" />}
+            </div>
+
+            {showLibrary && (
+              <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden animate-in">
+                <div className="p-2 border-b border-surface-border">
+                  <div className="relative">
+                    <Search size={12} className="absolute start-3 top-1/2 -translate-y-1/2 text-surface-muted" />
+                    <input
+                      type="text"
+                      autoFocus
+                      className="input input-sm ps-8 h-8 rounded-lg"
+                      placeholder="Search library..."
+                      value={searchLibrary}
+                      onChange={(e) => setSearchLibrary(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {filteredLibrary.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-surface-muted">No matching items in library.</div>
+                  ) : filteredLibrary.map((lib) => (
+                    <button
+                      key={lib.id}
+                      type="button"
+                      onClick={() => handleSelectLibraryItem(lib)}
+                      className="w-full text-start p-3 hover:bg-white/5 border-b border-surface-border last:border-0 transition-colors"
+                    >
+                      <div className="font-medium text-white text-sm">{lib.name}</div>
+                      <div className="text-[10px] text-surface-muted flex gap-2">
+                        {lib.unit && <span>Unit: {lib.unit}</span>}
+                        {lib.unit_price > 0 && <span>Price: {lib.unit_price}</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {category === 'materials' && (
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="label">Quantity</label>
-                <input type="number" className="input" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="0" min="0" />
+                <input type="number" className="input" value={form.quantity} onChange={(e) => setForm((currentForm) => ({ ...currentForm, quantity: e.target.value }))} placeholder="0" min="0" />
               </div>
               <div>
                 <label className="label">Unit</label>
-                <input type="text" className="input" value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} placeholder="m³, kg, bag" />
+                <div className="relative">
+                  <input
+                    type="text"
+                    className={cn('input', !isAdmin && 'bg-surface/50 cursor-not-allowed')}
+                    value={form.unit}
+                    onChange={(e) => {
+                      if (!isAdmin) return
+                      setSelectedLibraryItemId(null)
+                      setForm((currentForm) => ({ ...currentForm, unit: e.target.value }))
+                    }}
+                    placeholder="m3, kg, bag"
+                    readOnly={!isAdmin}
+                  />
+                  {!isAdmin && <Lock size={12} className="absolute end-3 top-1/2 -translate-y-1/2 text-surface-muted opacity-50" />}
+                </div>
               </div>
               <div>
                 <label className="label">Unit Price</label>
-                <input type="number" className="input" value={form.unit_price} onChange={e => setForm(f => ({ ...f, unit_price: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
+                <div className="relative">
+                  <input
+                    type="number"
+                    className={cn('input', !isAdmin && 'bg-surface/50 cursor-not-allowed')}
+                    value={form.unit_price}
+                    onChange={(e) => {
+                      if (!isAdmin) return
+                      setSelectedLibraryItemId(null)
+                      setForm((currentForm) => ({ ...currentForm, unit_price: e.target.value }))
+                    }}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    readOnly={!isAdmin}
+                  />
+                  {!isAdmin && <Lock size={12} className="absolute end-3 top-1/2 -translate-y-1/2 text-surface-muted opacity-50" />}
+                </div>
               </div>
             </div>
           )}
@@ -100,15 +277,15 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="label">Workers</label>
-                <input type="number" className="input" value={form.workers} onChange={e => setForm(f => ({ ...f, workers: e.target.value }))} placeholder="0" min="0" />
+                <input type="number" className="input" value={form.workers} onChange={(e) => setForm((currentForm) => ({ ...currentForm, workers: e.target.value }))} placeholder="0" min="0" />
               </div>
               <div>
                 <label className="label">Daily Rate</label>
-                <input type="number" className="input" value={form.daily_rate} onChange={e => setForm(f => ({ ...f, daily_rate: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
+                <input type="number" className="input" value={form.daily_rate} onChange={(e) => setForm((currentForm) => ({ ...currentForm, daily_rate: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
               </div>
               <div>
                 <label className="label">Days</label>
-                <input type="number" className="input" value={form.days} onChange={e => setForm(f => ({ ...f, days: e.target.value }))} placeholder="0" min="0" />
+                <input type="number" className="input" value={form.days} onChange={(e) => setForm((currentForm) => ({ ...currentForm, days: e.target.value }))} placeholder="0" min="0" />
               </div>
             </div>
           )}
@@ -117,15 +294,15 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="label">Rental Cost</label>
-                <input type="number" className="input" value={form.rental_cost} onChange={e => setForm(f => ({ ...f, rental_cost: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
+                <input type="number" className="input" value={form.rental_cost} onChange={(e) => setForm((currentForm) => ({ ...currentForm, rental_cost: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
               </div>
               <div>
                 <label className="label">Maintenance</label>
-                <input type="number" className="input" value={form.maintenance} onChange={e => setForm(f => ({ ...f, maintenance: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
+                <input type="number" className="input" value={form.maintenance} onChange={(e) => setForm((currentForm) => ({ ...currentForm, maintenance: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
               </div>
               <div>
                 <label className="label">Fuel</label>
-                <input type="number" className="input" value={form.fuel} onChange={e => setForm(f => ({ ...f, fuel: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
+                <input type="number" className="input" value={form.fuel} onChange={(e) => setForm((currentForm) => ({ ...currentForm, fuel: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
               </div>
             </div>
           )}
@@ -133,13 +310,13 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
           {category === 'additional' && (
             <div>
               <label className="label">Amount</label>
-              <input type="number" className="input" value={form.unit_price} onChange={e => setForm(f => ({ ...f, unit_price: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
+              <input type="number" className="input" value={form.unit_price} onChange={(e) => setForm((currentForm) => ({ ...currentForm, unit_price: e.target.value }))} placeholder="0.00" min="0" step="0.01" />
             </div>
           )}
 
           <div>
             <label className="label">Notes</label>
-            <textarea className="input resize-none" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes..." />
+            <textarea className="input resize-none" rows={2} value={form.notes} onChange={(e) => setForm((currentForm) => ({ ...currentForm, notes: e.target.value }))} placeholder="Optional notes..." />
           </div>
         </form>
 
