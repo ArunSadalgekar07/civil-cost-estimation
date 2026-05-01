@@ -11,6 +11,7 @@ export type Database = {
           full_name: string | null
           role: string
           avatar_url: string | null
+          email: string | null
           created_at: string
         }
         Insert: {
@@ -18,6 +19,7 @@ export type Database = {
           full_name?: string | null
           role?: string
           avatar_url?: string | null
+          email?: string | null
           created_at?: string
         }
         Update: {
@@ -25,6 +27,7 @@ export type Database = {
           full_name?: string | null
           role?: string
           avatar_url?: string | null
+          email?: string | null
           created_at?: string
         }
       }
@@ -202,6 +205,7 @@ export type Database = {
           unit: string | null
           unit_price: number
           currency: string
+          image_url: string | null
           created_at: string
         }
         Insert: {
@@ -213,6 +217,7 @@ export type Database = {
           unit?: string | null
           unit_price?: number
           currency?: string
+          image_url?: string | null
           created_at?: string
         }
         Update: {
@@ -224,6 +229,7 @@ export type Database = {
           unit?: string | null
           unit_price?: number
           currency?: string
+          image_url?: string | null
           created_at?: string
         }
       }
@@ -305,32 +311,6 @@ export type Database = {
           password_hash?: string | null
           expires_at?: string | null
           access_count?: number
-          created_at?: string
-        }
-      }
-      notifications: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          message: string | null
-          is_read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          title: string
-          message?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          message?: string | null
-          is_read?: boolean
           created_at?: string
         }
       }

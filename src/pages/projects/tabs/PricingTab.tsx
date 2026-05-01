@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/store/projectStore'
 import { calculateCostSummary } from '@/lib/calculations'
-import { DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
+import { DEFAULT_CURRENCY, formatCurrency, getCurrencyRate } from '@/lib/utils'
 import { useSystemStore } from '@/store/systemStore'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
@@ -18,18 +18,51 @@ export default function PricingTab({ projectId }: Props) {
     overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY
   })
   const [saving, setSaving] = useState(false)
+  const [previewRate, setPreviewRate] = useState(1)
+  const [rateMeta, setRateMeta] = useState('')
 
   useEffect(() => {
-    if (financialSettings) setSettings(financialSettings)
+    if (financialSettings) {
+      setSettings(financialSettings)
+      setPreviewRate(1)
+      setRateMeta('')
+    }
   }, [financialSettings])
 
   const canEdit = profile?.role === 'admin' || currentProject?.user_id === user?.id
-  const summary = calculateCostSummary(costItems, settings, risks)
+  const sourceCurrency = financialSettings?.currency || DEFAULT_CURRENCY
+  const previewCostItems = sourceCurrency === settings.currency
+    ? costItems
+    : costItems.map((item) => ({
+        ...item,
+        unit_price: item.unit_price == null ? null : item.unit_price * previewRate,
+        daily_rate: item.daily_rate == null ? null : item.daily_rate * previewRate,
+        rental_cost: item.rental_cost == null ? null : item.rental_cost * previewRate,
+        maintenance: item.maintenance == null ? null : item.maintenance * previewRate,
+        fuel: item.fuel == null ? null : item.fuel * previewRate,
+      }))
+  const previewRisks = sourceCurrency === settings.currency
+    ? risks
+    : risks.map((risk) => ({ ...risk, impact: (risk.impact || 0) * previewRate }))
+  const summary = calculateCostSummary(previewCostItems, settings, previewRisks)
+
+  const handleCurrencyChange = async (currency: string) => {
+    setSettings({ ...settings, currency })
+    if (currency === sourceCurrency) {
+      setPreviewRate(1)
+      setRateMeta('')
+      return
+    }
+
+    const { rate, date, source } = await getCurrencyRate(sourceCurrency, currency)
+    setPreviewRate(rate)
+    setRateMeta(`Preview uses ${source} ${sourceCurrency} to ${currency} rate dated ${date}.`)
+  }
 
   const handleSave = async () => {
     setSaving(true)
     await updateFinancialSettings(projectId, settings)
-    toast.success('Pricing settings saved')
+    toast.success(rateMeta ? `Pricing settings saved. ${rateMeta}` : 'Pricing settings saved')
     setSaving(false)
   }
 
@@ -49,12 +82,13 @@ export default function PricingTab({ projectId }: Props) {
           <label className="label">Currency</label>
           <select
             value={settings.currency}
-            onChange={e => setSettings({ ...settings, currency: e.target.value })}
+            onChange={e => handleCurrencyChange(e.target.value)}
             className="input"
             disabled={!canEdit}
           >
             {currencies.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          {rateMeta && <p className="text-xs text-surface-muted mt-2">{rateMeta}</p>}
         </div>
 
         {sliders.map(({ label, key, color }) => {

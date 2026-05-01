@@ -88,7 +88,57 @@ export const CURRENCY_RATES: Record<string, number> = {
 }
 
 export function convertCurrency(amount: number, from: string, to: string): number {
+  if (from === to) return amount
   const fromRate = CURRENCY_RATES[from] || 1
   const toRate = CURRENCY_RATES[to] || 1
   return (amount / fromRate) * toRate
+}
+
+type RateResult = {
+  rate: number
+  date: string
+  source: 'Frankfurter' | 'fallback'
+}
+
+const rateCache = new Map<string, RateResult>()
+
+export async function getCurrencyRate(from: string, to: string): Promise<RateResult> {
+  if (from === to) {
+    return { rate: 1, date: new Date().toISOString().slice(0, 10), source: 'fallback' }
+  }
+
+  const cacheKey = `${from}:${to}`
+  const cached = rateCache.get(cacheKey)
+  if (cached) return cached
+
+  try {
+    const response = await fetch(`https://api.frankfurter.dev/v1/latest?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`)
+    if (!response.ok) throw new Error(`Exchange rate request failed: ${response.status}`)
+
+    const data = await response.json() as { date?: string; rates?: Record<string, number> }
+    const rate = data.rates?.[to]
+    if (!rate || !Number.isFinite(rate)) throw new Error(`Missing ${from} to ${to} exchange rate`)
+
+    const result: RateResult = {
+      rate,
+      date: data.date || new Date().toISOString().slice(0, 10),
+      source: 'Frankfurter',
+    }
+    rateCache.set(cacheKey, result)
+    return result
+  } catch (error) {
+    console.warn('Live currency conversion failed; using fallback rate.', error)
+    const fallback: RateResult = {
+      rate: convertCurrency(1, from, to),
+      date: new Date().toISOString().slice(0, 10),
+      source: 'fallback',
+    }
+    rateCache.set(cacheKey, fallback)
+    return fallback
+  }
+}
+
+export async function convertCurrencyLive(amount: number, from: string, to: string): Promise<number> {
+  const { rate } = await getCurrencyRate(from, to)
+  return amount * rate
 }

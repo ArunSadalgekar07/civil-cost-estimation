@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/lib/supabase'
-import { convertCurrency, DEFAULT_CURRENCY } from '@/lib/utils'
+import { DEFAULT_CURRENCY, getCurrencyRate } from '@/lib/utils'
 import type { Project, CostItem, Risk, FinancialSettings } from '@/types'
 
 interface ProjectState {
@@ -220,8 +220,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const previousCurrency = currentSettings?.currency || defaultFinancial.currency
     const nextCurrency = data.currency || previousCurrency
     const shouldConvertValues = previousCurrency !== nextCurrency
+    const rate = shouldConvertValues ? (await getCurrencyRate(previousCurrency, nextCurrency)).rate : 1
     const convertAmount = (value: number | null | undefined) =>
-      value == null ? null : convertCurrency(value, previousCurrency, nextCurrency)
+      value == null ? null : value * rate
 
     if (shouldConvertValues) {
       const { data: storedItems } = await db.from('cost_items').select('*').eq('project_id', projectId)
@@ -237,7 +238,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       const { data: storedRisks } = await db.from('risks').select('*').eq('project_id', projectId)
       await Promise.all(((storedRisks || []) as Risk[]).map((risk) =>
-        db.from('risks').update({ impact: convertCurrency(risk.impact || 0, previousCurrency, nextCurrency) }).eq('id', risk.id)
+        db.from('risks').update({ impact: (risk.impact || 0) * rate }).eq('id', risk.id)
       ))
     }
 
@@ -266,7 +267,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             }))
           : state.costItems,
         risks: shouldConvertValues
-          ? state.risks.map((risk) => ({ ...risk, impact: convertCurrency(risk.impact || 0, previousCurrency, nextCurrency) }))
+          ? state.risks.map((risk) => ({ ...risk, impact: (risk.impact || 0) * rate }))
           : state.risks,
       }))
     }

@@ -5,7 +5,6 @@ import { db } from '@/lib/supabase'
 import { DEFAULT_CURRENCY } from '@/lib/utils'
 
 export default function AdminSettingsPage() {
-  const [appName, setAppName] = useState('Construction Cost Estimator')
   const [defaultCurrency, setDefaultCurrency] = useState(DEFAULT_CURRENCY)
   const [defaultLanguage, setDefaultLanguage] = useState('en')
   const [loading, setLoading] = useState(true)
@@ -16,7 +15,6 @@ export default function AdminSettingsPage() {
       const { data } = await db.from('app_settings').select('key, value')
       if (data) {
         data.forEach((setting: any) => {
-          if (setting.key === 'app_name') setAppName(setting.value || 'Construction Cost Estimator')
           if (setting.key === 'default_currency') setDefaultCurrency(setting.value || DEFAULT_CURRENCY)
           if (setting.key === 'default_language') setDefaultLanguage(setting.value || 'en')
         })
@@ -29,7 +27,6 @@ export default function AdminSettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     const settingsToUpdate = [
-      { key: 'app_name', value: appName },
       { key: 'default_currency', value: defaultCurrency },
       { key: 'default_language', value: defaultLanguage }
     ]
@@ -57,16 +54,6 @@ export default function AdminSettingsPage() {
         <h2 className="font-semibold text-white mb-2">Global Application Configuration</h2>
         
         <div className="space-y-4">
-          <div>
-            <label className="label">Brand App Name</label>
-            <input 
-              type="text" 
-              className="input w-full" 
-              value={appName} 
-              onChange={(e) => setAppName(e.target.value)} 
-            />
-          </div>
-
           <div>
             <label className="label">Global Default Currency</label>
             <select 

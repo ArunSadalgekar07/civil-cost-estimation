@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   role TEXT DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   avatar_url TEXT,
+  email TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -215,21 +216,6 @@ CREATE POLICY "Users can CRUD own databases" ON cost_databases FOR ALL USING (au
 CREATE POLICY "Anyone can view public databases" ON cost_databases FOR SELECT USING (is_public = true);
 
 -- ============================================================
--- NOTIFICATIONS
--- ============================================================
-CREATE TABLE IF NOT EXISTS notifications (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  title TEXT NOT NULL,
-  message TEXT,
-  is_read BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage own notifications" ON notifications FOR ALL USING (auth.uid() = user_id);
-
--- ============================================================
 -- AUDIT LOGS (Admin only)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -272,13 +258,15 @@ CREATE POLICY "Admins can manage app settings" ON app_settings FOR ALL USING (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, role)
+  INSERT INTO public.profiles (id, full_name, role, email)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    'user'
+    'user',
+    NEW.email
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

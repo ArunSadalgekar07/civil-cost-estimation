@@ -1,29 +1,35 @@
 import { useEffect, useState } from 'react'
 import { db } from '@/lib/supabase'
-import { Users, Search, X } from 'lucide-react'
+import { Users, Search, Trash2, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/store/authStore'
+import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal'
 
 interface UserProfile {
   id: string
   full_name: string | null
+  email: string | null
   role: string | null
   created_at: string | null
 }
 
 export default function AdminUsersPage() {
+  const { user: currentUser } = useAuthStore()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [editRole, setEditRole] = useState('')
 
   useEffect(() => {
     const fetch = async () => {
       const { data } = await db
         .from('profiles')
-        .select('id, full_name, role, created_at')
+        .select('id, full_name, email, role, created_at')
 
       setUsers((data || []) as UserProfile[])
       setLoading(false)
@@ -58,8 +64,31 @@ export default function AdminUsersPage() {
     setUpdating(false)
   }
 
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return
+    if (userToDelete.id === currentUser?.id) {
+      toast.error('You cannot delete your own admin account here.')
+      setUserToDelete(null)
+      return
+    }
+
+    setDeleting(true)
+    const { error } = await db.rpc('admin_delete_user', { target_user_id: userToDelete.id })
+
+    if (error) {
+      toast.error('Failed to delete user: ' + error.message)
+      console.error(error)
+    } else {
+      toast.success('User deleted successfully')
+      setUsers(users.filter(user => user.id !== userToDelete.id))
+      if (selectedUser?.id === userToDelete.id) setSelectedUser(null)
+      setUserToDelete(null)
+    }
+    setDeleting(false)
+  }
+
   const filtered = users.filter(user =>
-    (user.full_name || '').toLowerCase().includes(search.toLowerCase())
+    `${user.full_name || ''} ${user.email || ''}`.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -79,6 +108,7 @@ export default function AdminUsersPage() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Email</th>
               <th>Role</th>
               <th>Joined</th>
               <th>Actions</th>
@@ -86,14 +116,15 @@ export default function AdminUsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="text-center py-8">
+              <tr><td colSpan={5} className="text-center py-8">
                 <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
               </td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={4} className="text-center py-8 text-surface-muted">No users found.</td></tr>
+              <tr><td colSpan={5} className="text-center py-8 text-surface-muted">No users found.</td></tr>
             ) : filtered.map(user => (
               <tr key={user.id}>
                 <td className="font-medium">{user.full_name || 'Unnamed User'}</td>
+                <td className="text-surface-muted">{user.email || '-'}</td>
                 <td>
                   <span className={`badge ${user.role === 'admin' ? 'badge-blue' : 'badge-green'}`}>
                     {user.role || 'user'}
@@ -101,7 +132,17 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="text-surface-muted">{user.created_at ? formatDate(user.created_at) : '-'}</td>
                 <td>
-                  <button onClick={() => handleOpenUser(user)} className="btn btn-ghost p-1 text-xs px-3">View</button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handleOpenUser(user)} className="btn btn-ghost p-1 text-xs px-3">View</button>
+                    <button
+                      onClick={() => setUserToDelete(user)}
+                      disabled={user.id === currentUser?.id}
+                      className="btn btn-ghost p-1.5 hover:text-danger disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={user.id === currentUser?.id ? 'You cannot delete your own account' : 'Delete user'}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -133,6 +174,11 @@ export default function AdminUsersPage() {
               </div>
 
               <div>
+                <label className="text-xs font-semibold text-surface-muted uppercase tracking-wider mb-1 block">Email</label>
+                <div className="text-white font-medium">{selectedUser.email || '-'}</div>
+              </div>
+
+              <div>
                 <label className="text-xs font-semibold text-surface-muted uppercase tracking-wider mb-1 block">Role Level</label>
                 <select className="input w-full" value={editRole} onChange={e => setEditRole(e.target.value)}>
                   <option value="user">Standard User (user)</option>
@@ -149,6 +195,15 @@ export default function AdminUsersPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {userToDelete && (
+        <DeleteConfirmModal
+          title="Delete User"
+          message={`Delete ${userToDelete.full_name || userToDelete.email || 'this user'} and all data connected to their account? This cannot be undone.`}
+          onCancel={() => !deleting && setUserToDelete(null)}
+          onConfirm={handleDeleteUser}
+        />
       )}
     </div>
   )

@@ -4,8 +4,8 @@ import { useAuthStore } from '@/store/authStore'
 import { db, supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import i18n from '@/i18n/config'
-import { User, Globe, Bell, Lock, Database } from 'lucide-react'
-import { convertCurrency, CURRENCIES, DEFAULT_CURRENCY } from '@/lib/utils'
+import { User, Globe, Lock, Database } from 'lucide-react'
+import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyRate } from '@/lib/utils'
 import type { CostItem, FinancialSettings, Project, Risk } from '@/types'
 
 export default function SettingsPage() {
@@ -152,13 +152,16 @@ export default function SettingsPage() {
       return
     }
 
+    let conversionMeta = ''
     for (const project of (projects || []) as (Project & { financial_settings?: FinancialSettings[] })[]) {
       const currentSettings = project.financial_settings?.[0]
       const oldCurrency = currentSettings?.currency || preferredCurrency || DEFAULT_CURRENCY
       if (oldCurrency === newCurrency) continue
 
+      const { rate, date, source } = await getCurrencyRate(oldCurrency, newCurrency)
+      conversionMeta = ` using ${source} rate dated ${date}`
       const convertAmount = (value: number | null | undefined) =>
-        value == null ? null : convertCurrency(value, oldCurrency, newCurrency)
+        value == null ? null : value * rate
 
       const { data: items } = await db.from('cost_items').select('*').eq('project_id', project.id)
       await Promise.all(((items || []) as CostItem[]).map((item) =>
@@ -173,7 +176,7 @@ export default function SettingsPage() {
 
       const { data: risks } = await db.from('risks').select('*').eq('project_id', project.id)
       await Promise.all(((risks || []) as Risk[]).map((risk) =>
-        db.from('risks').update({ impact: convertCurrency(risk.impact || 0, oldCurrency, newCurrency) }).eq('id', risk.id)
+        db.from('risks').update({ impact: (risk.impact || 0) * rate }).eq('id', risk.id)
       ))
 
       await db.from('financial_settings').upsert({
@@ -185,14 +188,13 @@ export default function SettingsPage() {
 
     localStorage.setItem('preferred_currency', newCurrency)
     setPreferredCurrency(newCurrency)
-    toast.success(`Currency changed to ${newCurrency}. Existing project values were converted.`)
+    toast.success(`Currency changed to ${newCurrency}. Existing project values were converted${conversionMeta}.`)
     setUpdatingCurrency(false)
   }
 
   const sections = [
     { id: 'profile', label: t('settings.profile'), icon: <User size={16} /> },
     { id: 'preferences', label: t('settings.preferences'), icon: <Globe size={16} /> },
-    { id: 'notifications', label: t('settings.notifications'), icon: <Bell size={16} /> },
     { id: 'security', label: 'Security', icon: <Lock size={16} /> },
     { id: 'data', label: 'Data Management', icon: <Database size={16} /> },
   ]
@@ -273,22 +275,6 @@ export default function SettingsPage() {
                   Changing currency converts your existing project costs and risk values.
                 </p>
               </div>
-            </div>
-          )}
-
-          {activeSection === 'notifications' && (
-            <div className="card space-y-4">
-              <h2 className="font-semibold text-white">{t('settings.notifications')}</h2>
-              {[
-                { label: 'Email notifications', checked: true },
-                { label: 'Project shared notifications', checked: true },
-                { label: 'Cost summary reports', checked: false },
-              ].map(item => (
-                <label key={item.label} className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" defaultChecked={item.checked} className="accent-accent w-4 h-4" />
-                  <span className="text-sm text-white">{item.label}</span>
-                </label>
-              ))}
             </div>
           )}
 

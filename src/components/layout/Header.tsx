@@ -6,7 +6,6 @@ import { useAuthStore } from '@/store/authStore'
 import i18n from '@/i18n/config'
 import { Root, Trigger, Portal, Content, Item } from '@radix-ui/react-dropdown-menu'
 import * as Avatar from '@radix-ui/react-avatar'
-import NotificationsDropdown from './NotificationsDropdown'
 
 export default function Header() {
   const { t } = useTranslation()
@@ -33,9 +32,6 @@ export default function Header() {
         <Globe size={15} />
         <span>{lang === 'en' ? t('common.hindi') : t('common.english')}</span>
       </button>
-
-      {/* Notifications */}
-      <NotificationsDropdown />
 
       {/* User avatar */}
       <Root>

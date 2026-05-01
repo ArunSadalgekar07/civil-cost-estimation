@@ -43,7 +43,7 @@ export default function Sidebar() {
     <aside
       className={cn(
         'flex flex-col h-screen bg-surface-card border-e border-surface-border transition-all duration-300 ease-in-out flex-shrink-0',
-        collapsed ? 'w-16' : 'w-60'
+        collapsed ? 'w-16' : 'w-72'
       )}
     >
       {/* Logo */}

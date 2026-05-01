@@ -3,7 +3,7 @@ import { X, Search, Lock } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import { useProjectStore } from '@/store/projectStore'
 import { useAuthStore } from '@/store/authStore'
-import { cn, convertCurrency, DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
+import { cn, DEFAULT_CURRENCY, formatCurrency, getCurrencyRate } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { CostItem, CostCategory, Resource } from '@/types'
 
@@ -90,11 +90,12 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
     )
   }, [form.name, form.unit, form.unit_price, isAdmin, item, libraryItems, selectedLibraryItemId])
 
-  const handleSelectLibraryItem = (selectedItem: LibraryResource) => {
+  const handleSelectLibraryItem = async (selectedItem: LibraryResource) => {
     setSelectedLibraryItemId(selectedItem.id)
     const projectCurrency = financialSettings?.currency || DEFAULT_CURRENCY
     const resourceCurrency = selectedItem.currency || DEFAULT_CURRENCY
-    const convertedUnitPrice = convertCurrency(selectedItem.unit_price || 0, resourceCurrency, projectCurrency)
+    const { rate } = await getCurrencyRate(resourceCurrency, projectCurrency)
+    const convertedUnitPrice = (selectedItem.unit_price || 0) * rate
     setForm((currentForm) => ({
       ...currentForm,
       name: selectedItem.name,

@@ -5,6 +5,7 @@ export interface Profile {
   full_name: string | null
   role: 'admin' | 'user'
   avatar_url: string | null
+  email: string | null
   created_at: string
 }
 
@@ -101,6 +102,7 @@ export interface Resource {
   unit: string | null
   unit_price: number
   currency: string
+  image_url: string | null
   created_at: string
 }
 
@@ -111,15 +113,6 @@ export interface CostDatabase {
   description: string | null
   currency: string
   is_public: boolean
-  created_at: string
-}
-
-export interface Notification {
-  id: string
-  user_id: string
-  title: string
-  message: string
-  is_read: boolean
   created_at: string
 }
 
