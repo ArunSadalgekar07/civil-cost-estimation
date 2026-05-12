@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { X, Search, Lock } from 'lucide-react'
+import { X, Search, Lock, Image as ImageIcon } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import { useProjectStore } from '@/store/projectStore'
 import { useAuthStore } from '@/store/authStore'
@@ -7,7 +7,7 @@ import { cn, DEFAULT_CURRENCY, formatCurrency, getCurrencyRate } from '@/lib/uti
 import { toast } from 'sonner'
 import type { CostItem, CostCategory, Resource } from '@/types'
 
-type LibraryResource = Pick<Resource, 'id' | 'name' | 'description' | 'unit' | 'unit_price' | 'currency'> & {
+type LibraryResource = Pick<Resource, 'id' | 'name' | 'description' | 'unit' | 'unit_price' | 'currency' | 'image_url'> & {
   profiles?: {
     role?: 'admin' | 'user'
   } | null
@@ -218,10 +218,24 @@ export default function CostItemFormModal({ projectId, category, item, onClose }
                       onClick={() => handleSelectLibraryItem(lib)}
                       className="w-full text-start p-3 hover:bg-white/5 border-b border-surface-border last:border-0 transition-colors"
                     >
-                      <div className="font-medium text-white text-sm">{lib.name}</div>
-                      <div className="text-[10px] text-surface-muted flex gap-2">
-                        {lib.unit && <span>Unit: {lib.unit}</span>}
-                        {lib.unit_price > 0 && <span>Price: {formatCurrency(lib.unit_price, lib.currency || DEFAULT_CURRENCY)}</span>}
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-surface-border bg-surface flex items-center justify-center">
+                          {lib.image_url ? (
+                            <img src={lib.image_url} alt={lib.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <ImageIcon size={16} className="text-surface-muted" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-white text-sm truncate">{lib.name}</div>
+                          {lib.description && (
+                            <div className="text-[10px] text-surface-muted truncate">{lib.description}</div>
+                          )}
+                          <div className="text-[10px] text-surface-muted flex gap-2">
+                            {lib.unit && <span>Unit: {lib.unit}</span>}
+                            {lib.unit_price > 0 && <span>Price: {formatCurrency(lib.unit_price, lib.currency || DEFAULT_CURRENCY)}</span>}
+                          </div>
+                        </div>
                       </div>
                     </button>
                   ))}
