@@ -1,20 +1,21 @@
 import { useState } from 'react'
-import { SlidersHorizontal, Settings, Database, BadgeDollarSign, Ruler, Plus, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { SlidersHorizontal, Database, BadgeDollarSign, Ruler, Plus, X } from 'lucide-react'
 import { useSystemStore } from '@/store/systemStore'
 import { toast } from 'sonner'
 
 export default function AdminProjectDataPage() {
+  const { t } = useTranslation()
   const store = useSystemStore()
-  
-  // Local state for the "Add New" inputs
+
   const [inputs, setInputs] = useState<Record<string, string>>({
-    projectTypes: '', sizeUnits: '', durationUnits: '', costCategories: '', currencies: ''
+    projectTypes: '', sizeUnits: '', durationUnits: '', currencies: ''
   })
 
   const handleAdd = (key: keyof typeof inputs, storeKey: keyof typeof store) => {
     const val = inputs[key].trim()
     if (!val) return
-    
+
     const currentArray = store[storeKey] as string[]
     if (currentArray.includes(val)) {
       toast.warning('This item already exists in the dictionary.')
@@ -37,13 +38,13 @@ export default function AdminProjectDataPage() {
   }
 
   const renderDictionaryCard = (
-    title: string, 
-    icon: React.ReactNode, 
-    storeKey: 'projectTypes' | 'sizeUnits' | 'durationUnits' | 'costCategories' | 'currencies',
+    title: string,
+    icon: React.ReactNode,
+    storeKey: 'projectTypes' | 'sizeUnits' | 'durationUnits' | 'currencies',
     inputKey: string
   ) => {
     const items = store[storeKey] as string[]
-    
+
     return (
       <div className="card space-y-4">
         <div className="flex items-center gap-2 text-white font-semibold mb-2">
@@ -63,16 +64,16 @@ export default function AdminProjectDataPage() {
         </div>
 
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-surface-border/50">
-          <input 
-            type="text" 
-            className="input py-1.5 text-sm flex-1" 
-            placeholder="Add new item..." 
+          <input
+            type="text"
+            className="input py-1.5 text-sm flex-1"
+            placeholder={t('admin.addNewItem')}
             value={inputs[inputKey]}
             onChange={e => setInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
             onKeyDown={e => e.key === 'Enter' && handleAdd(inputKey, storeKey)}
           />
           <button onClick={() => handleAdd(inputKey, storeKey)} className="btn-primary py-1.5 px-3 text-sm flex items-center gap-1 shadow-none">
-            <Plus size={14} /> Add
+            <Plus size={14} /> {t('admin.add')}
           </button>
         </div>
       </div>
@@ -87,29 +88,18 @@ export default function AdminProjectDataPage() {
     <div className="animate-in space-y-6">
       <div className="flex items-center gap-2 border-b border-surface-border pb-4">
         <SlidersHorizontal size={26} className="text-accent" />
-        <h1 className="text-2xl font-bold text-white">Project Data Settings (Global)</h1>
+        <h1 className="text-2xl font-bold text-white">{t('admin.projectDataTitle')}</h1>
       </div>
 
       <p className="text-surface-muted text-sm max-w-3xl">
-        Manage the system dictionaries and taxonomies used across all user projects. 
-        Adding a new option here instantly provisions it in every Project Builder dropdown globally.
+        {t('admin.projectDataDesc')}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {renderDictionaryCard('Project Taxonomy Types', <Database size={18} className="text-accent" />, 'projectTypes', 'projectTypes')}
-        {renderDictionaryCard('Size Boundaries', <Ruler size={18} className="text-orange-400" />, 'sizeUnits', 'sizeUnits')}
-        {renderDictionaryCard('Duration Timelines', <Ruler size={18} className="text-blue-400" />, 'durationUnits', 'durationUnits')}
-        {renderDictionaryCard('Cost Categories', <BadgeDollarSign size={18} className="text-purple-400" />, 'costCategories', 'costCategories')}
-        {renderDictionaryCard('Global Currencies', <BadgeDollarSign size={18} className="text-green-400" />, 'currencies', 'currencies')}
-
-        {/* Global Architecture Indicator */}
-        <div className="card border-dashed border-2 border-surface-border bg-surface/30 flex flex-col items-center justify-center text-center p-8">
-          <Settings size={32} className="text-surface-muted opacity-50 mb-3" />
-          <h3 className="text-white font-medium mb-1">State Sync Active</h3>
-          <p className="text-sm text-surface-muted">
-            The database `app_settings` engine is explicitly online.
-          </p>
-        </div>
+        {renderDictionaryCard(t('admin.projectTaxonomy'), <Database size={18} className="text-accent" />, 'projectTypes', 'projectTypes')}
+        {renderDictionaryCard(t('admin.sizeBoundaries'), <Ruler size={18} className="text-orange-400" />, 'sizeUnits', 'sizeUnits')}
+        {renderDictionaryCard(t('admin.durationTimelines'), <Ruler size={18} className="text-blue-400" />, 'durationUnits', 'durationUnits')}
+        {renderDictionaryCard(t('admin.globalCurrencies'), <BadgeDollarSign size={18} className="text-green-400" />, 'currencies', 'currencies')}
       </div>
     </div>
   )

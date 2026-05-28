@@ -7,19 +7,18 @@ import { toast } from 'sonner'
 import type { Resource } from '@/types'
 import { DEFAULT_CURRENCY, formatCurrency, cn } from '@/lib/utils'
 
-type ResourceCategory = 'materials' | 'labor' | 'equipment' | 'assemblies'
-type ResourceWithOwnerRole = Resource & {
-  profiles?: {
-    role?: 'admin' | 'user'
-  } | null
-}
-
-const TABS: { id: ResourceCategory; label: string }[] = [
-  { id: 'materials', label: 'Materials' },
-  { id: 'labor', label: 'Labor' },
-  { id: 'equipment', label: 'Equipment' },
-  { id: 'assemblies', label: 'Assemblies' },
+type ResourceCategory = 'materials' | 'labor' | 'equipment'
+const TABS: { id: ResourceCategory; labelKey: string }[] = [
+  { id: 'materials', labelKey: 'resources.materials' },
+  { id: 'labor', labelKey: 'resources.labor' },
+  { id: 'equipment', labelKey: 'resources.equipment' },
 ]
+
+const RESOURCE_IMAGE_BUCKETS: Record<ResourceCategory, string> = {
+  materials: 'material-images',
+  labor: 'labor-images',
+  equipment: 'equipment-images',
+}
 
 const CATEGORY_FORM_COPY: Record<ResourceCategory, {
   imageLabel: string
@@ -57,15 +56,6 @@ const CATEGORY_FORM_COPY: Record<ResourceCategory, {
     unitPlaceholder: 'day, hour, week, month',
     priceLabel: 'Rental Rate',
   },
-  assemblies: {
-    imageLabel: 'Assembly Image',
-    nameLabel: 'Assembly Name *',
-    namePlaceholder: 'e.g. RCC Slab M25 with Reinforcement',
-    descriptionPlaceholder: 'e.g. Concrete, steel, shuttering, placement, and labor combined',
-    unitLabel: 'Output Unit',
-    unitPlaceholder: 'm2, m3, sq ft, running m',
-    priceLabel: 'Assembly Rate',
-  },
 }
 
 export default function ResourcesPage() {
@@ -78,7 +68,7 @@ export default function ResourcesPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<Resource | null>(null)
-  const [form, setForm] = useState({ name: '', description: '', unit: '', unit_price: '', image_url: '' })
+  const [form, setForm] = useState({ name: '', description: '', unit: '', unit_price: '', maintenance_rate: '', fuel_rate: '', image_url: '' })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -90,17 +80,23 @@ export default function ResourcesPage() {
 
     const { data, error } = await db
       .from('resources')
-      .select('*, profiles:user_id(role)')
+      .select('*')
       .eq('category', activeTab)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Fetch error:', error)
-      const { data: fallbackData } = await db.from('resources').select('*').eq('category', activeTab)
-      setResources((fallbackData || []) as Resource[])
+      setResources([])
     } else {
-      const filtered = ((data || []) as ResourceWithOwnerRole[]).filter((resource) =>
-        isAdmin || resource.user_id === user.id || resource.profiles?.role === 'admin'
+      const resourceRows = (data || []) as Resource[]
+      const ownerIds = [...new Set(resourceRows.map((resource) => resource.user_id).filter(Boolean))]
+      const { data: ownerProfiles } = ownerIds.length > 0
+        ? await db.from('profiles').select('id, role').in('id', ownerIds)
+        : { data: [] }
+      const ownerRoleById = new Map((ownerProfiles || []).map((owner: { id: string; role: string | null }) => [owner.id, owner.role]))
+
+      const filtered = resourceRows.filter((resource) =>
+        isAdmin || resource.user_id === user.id || ownerRoleById.get(resource.user_id) === 'admin'
       )
       setResources(filtered)
     }
@@ -115,7 +111,7 @@ export default function ResourcesPage() {
   const resetForm = () => {
     setShowForm(false)
     setEditItem(null)
-    setForm({ name: '', description: '', unit: '', unit_price: '', image_url: '' })
+    setForm({ name: '', description: '', unit: '', unit_price: '', maintenance_rate: '', fuel_rate: '', image_url: '' })
     setImageFile(null)
   }
 
@@ -139,14 +135,15 @@ export default function ResourcesPage() {
     const extension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg'
     const safeName = imageFile.name.replace(/[^a-z0-9.-]/gi, '-').toLowerCase()
     const path = `${user.id}/${Date.now()}-${safeName}.${extension}`.replace(/(\.[a-z0-9]+)\.\1$/, '$1')
-    const { error } = await supabase.storage.from('resource-images').upload(path, imageFile, {
+    const bucket = RESOURCE_IMAGE_BUCKETS[activeTab]
+    const { error } = await supabase.storage.from(bucket).upload(path, imageFile, {
       cacheControl: '3600',
       upsert: false,
     })
 
     if (error) throw error
 
-    const { data } = supabase.storage.from('resource-images').getPublicUrl(path)
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path)
     return data.publicUrl
   }
 
@@ -180,6 +177,8 @@ export default function ResourcesPage() {
       unit_price: Number(form.unit_price) || 0,
       currency: DEFAULT_CURRENCY,
       image_url: imageUrl,
+      maintenance_rate: activeTab === 'equipment' ? (Number(form.maintenance_rate) || 0) : null,
+      fuel_rate: activeTab === 'equipment' ? (Number(form.fuel_rate) || 0) : null,
     }
 
     if (editItem) {
@@ -210,9 +209,14 @@ export default function ResourcesPage() {
       toast.error('Only admins can delete library resources.')
       return
     }
-    await db.from('resources').delete().eq('id', id)
-    toast.success('Resource deleted')
-    fetchResources()
+    const { error } = await db.from('resources').delete().eq('id', id)
+    if (error) {
+      toast.error('Failed to delete resource: ' + error.message)
+      console.error('Delete resource error:', error)
+    } else {
+      toast.success('Resource deleted successfully')
+      fetchResources()
+    }
   }
 
   const handleEdit = (resource: Resource) => {
@@ -221,7 +225,15 @@ export default function ResourcesPage() {
       return
     }
     setEditItem(resource)
-    setForm({ name: resource.name, description: resource.description || '', unit: resource.unit || '', unit_price: resource.unit_price.toString(), image_url: resource.image_url || '' })
+    setForm({
+      name: resource.name,
+      description: resource.description || '',
+      unit: resource.unit || '',
+      unit_price: resource.unit_price.toString(),
+      maintenance_rate: (resource as any).maintenance_rate?.toString() || '',
+      fuel_rate: (resource as any).fuel_rate?.toString() || '',
+      image_url: resource.image_url || ''
+    })
     setImageFile(null)
     setShowForm(true)
   }
@@ -243,16 +255,16 @@ export default function ResourcesPage() {
             onClick={() => { setActiveTab(tab.id); setSearch('') }}
             className={cn('tab-item', activeTab === tab.id && 'active')}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-semibold text-white">{TABS.find((tab) => tab.id === activeTab)?.label}</h2>
+        <h2 className="text-lg font-semibold text-white">{t(TABS.find((tab) => tab.id === activeTab)?.labelKey || 'resources.materials')}</h2>
         {isAdmin && (
           <button
-            onClick={() => { setEditItem(null); setForm({ name: '', description: '', unit: '', unit_price: '', image_url: '' }); setImageFile(null); setShowForm(true) }}
+            onClick={() => { setEditItem(null); setForm({ name: '', description: '', unit: '', unit_price: '', maintenance_rate: '', fuel_rate: '', image_url: '' }); setImageFile(null); setShowForm(true) }}
             className="btn-primary btn-sm"
           >
             <Plus size={14} /> {t('resources.add')}
@@ -265,7 +277,7 @@ export default function ResourcesPage() {
         <input type="text" className="input ps-9" placeholder={t('resources.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <p className="text-sm text-surface-muted">{filtered.length} item{filtered.length !== 1 ? 's' : ''}</p>
+      <p className="text-sm text-surface-muted">{t('resources.itemCount', { count: filtered.length })}</p>
 
       {loading ? (
         <div className="space-y-2">
@@ -276,17 +288,19 @@ export default function ResourcesPage() {
           <table className="table">
             <thead>
               <tr>
-                <th className="w-24">Image</th>
+                <th className="w-24">{t('resources.image')}</th>
                 <th>{t('resources.name')}</th>
                 <th>{t('resources.description')}</th>
                 <th>{t('resources.unit')}</th>
                 <th>{formCopy.priceLabel}</th>
+                {activeTab === 'equipment' && <th>Maint./day</th>}
+                {activeTab === 'equipment' && <th>Fuel/day</th>}
                 {isAdmin && <th>{t('resources.actions')}</th>}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-surface-muted">{t('resources.noItems')}</td></tr>
+                <tr><td colSpan={isAdmin ? (activeTab === 'equipment' ? 8 : 6) : (activeTab === 'equipment' ? 7 : 5)} className="text-center py-8 text-surface-muted">{t('resources.noItems')}</td></tr>
               ) : filtered.map((resource) => (
                 <tr key={resource.id}>
                   <td>
@@ -309,6 +323,8 @@ export default function ResourcesPage() {
                   <td className="text-surface-muted text-sm">{resource.description || <span className="italic opacity-50">No description</span>}</td>
                   <td>{resource.unit || '-'}</td>
                   <td>{formatCurrency(resource.unit_price, resource.currency || DEFAULT_CURRENCY)}</td>
+                  {activeTab === 'equipment' && <td className="text-surface-muted">{(resource as any).maintenance_rate > 0 ? formatCurrency((resource as any).maintenance_rate, resource.currency || DEFAULT_CURRENCY) : '-'}</td>}
+                  {activeTab === 'equipment' && <td className="text-surface-muted">{(resource as any).fuel_rate > 0 ? formatCurrency((resource as any).fuel_rate, resource.currency || DEFAULT_CURRENCY) : '-'}</td>}
                   {isAdmin && (
                     <td>
                         <div className="flex items-center gap-1">
@@ -327,12 +343,12 @@ export default function ResourcesPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl shadow-2xl animate-in">
+          <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] overflow-hidden shadow-2xl animate-in">
             <div className="flex items-center justify-between p-5 border-b border-surface-border">
               <h2 className="font-semibold text-white">{editItem ? 'Edit' : 'Add'} Resource</h2>
               <button onClick={resetForm} className="btn btn-ghost p-1.5"><X size={16} /></button>
             </div>
-            <div className="p-5 grid gap-5 md:grid-cols-[180px_1fr]">
+            <div className="p-4 sm:p-5 grid gap-5 md:grid-cols-[180px_1fr] max-h-[calc(100vh-10rem)] overflow-y-auto">
               <div className="space-y-3">
                 <label className="label">{formCopy.imageLabel}</label>
                 <button
@@ -374,7 +390,7 @@ export default function ResourcesPage() {
                   <label className="label">Description</label>
                   <input type="text" className="input" value={form.description} onChange={(e) => setForm((currentForm) => ({ ...currentForm, description: e.target.value }))} placeholder={formCopy.descriptionPlaceholder} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="label">{formCopy.unitLabel}</label>
                     <input type="text" className="input" placeholder={formCopy.unitPlaceholder} value={form.unit} onChange={(e) => setForm((currentForm) => ({ ...currentForm, unit: e.target.value }))} />
@@ -384,9 +400,39 @@ export default function ResourcesPage() {
                     <input type="number" className="input" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm((currentForm) => ({ ...currentForm, unit_price: e.target.value }))} />
                   </div>
                 </div>
+
+                {/* Extra rate fields for equipment only */}
+                {activeTab === 'equipment' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Maintenance Rate / day ({DEFAULT_CURRENCY})</label>
+                      <input
+                        type="number"
+                        className="input"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={form.maintenance_rate}
+                        onChange={(e) => setForm((f) => ({ ...f, maintenance_rate: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Fuel Rate / day ({DEFAULT_CURRENCY})</label>
+                      <input
+                        type="number"
+                        className="input"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={form.fuel_rate}
+                        onChange={(e) => setForm((f) => ({ ...f, fuel_rate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex gap-3 p-5 border-t border-surface-border">
+            <div className="flex flex-col sm:flex-row gap-3 p-4 sm:p-5 border-t border-surface-border">
               <button onClick={() => setShowForm(false)} className="btn-outline flex-1">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">
                 {saving ? 'Saving...' : (editItem ? 'Update' : 'Add Resource')}

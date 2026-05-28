@@ -31,21 +31,35 @@ export default function CostDatabasesPage() {
   const fetchDatabases = async () => {
     if (!user) return
     setLoading(true)
-    const { data } = await db
+    const { data, error } = await db
       .from('cost_databases')
-      .select('*, profiles:user_id(role)')
+      .select('*')
       .order('created_at', { ascending: false })
 
-    // If admin: see all. If user: see own + admins.
-    const filtered = data?.filter((db: any) => 
-      db.user_id === user.id || db.profiles?.role === 'admin'
-    ) || []
+    if (error) {
+      console.error('Cost databases fetch error:', error)
+      setDatabases([])
+      setLoading(false)
+      return
+    }
 
-    setDatabases(filtered as CostDatabaseItem[])
+    const databaseRows = (data || []) as CostDatabaseItem[]
+    const ownerIds = [...new Set(databaseRows.map((database) => database.user_id).filter(Boolean))]
+    const { data: ownerProfiles } = ownerIds.length > 0
+      ? await db.from('profiles').select('id, role').in('id', ownerIds)
+      : { data: [] }
+    const ownerRoleById = new Map((ownerProfiles || []).map((owner: { id: string; role: string | null }) => [owner.id, owner.role]))
+
+    // If admin: see all. If user: see own + admins.
+    const filtered = databaseRows.filter((database) =>
+      isAdmin || database.user_id === user.id || ownerRoleById.get(database.user_id) === 'admin'
+    )
+
+    setDatabases(filtered)
     setLoading(false)
   }
 
-  useEffect(() => { fetchDatabases() }, [user])
+  useEffect(() => { fetchDatabases() }, [user, isAdmin])
 
   const filtered = databases.filter(d => d.name.toLowerCase().includes(search.toLowerCase()))
 

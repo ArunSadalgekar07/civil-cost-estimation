@@ -122,7 +122,7 @@
   }
 
   .table {
-    @apply w-full text-sm;
+    @apply w-full min-w-max text-sm;
   }
 
   .table thead {
@@ -190,7 +190,7 @@
 
   /* Tab */
   .tab-list {
-    @apply flex gap-1 bg-surface rounded-lg p-1 border border-surface-border flex-wrap;
+    @apply flex gap-1 bg-surface rounded-lg p-1 border border-surface-border overflow-x-auto;
   }
 
   .tab-item {
@@ -200,6 +200,29 @@
 
   .tab-item.active {
     @apply bg-surface-card text-white shadow-sm;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    @apply p-4 rounded-lg;
+  }
+
+  .stat-value {
+    @apply text-xl;
+  }
+
+  .tab-list {
+    @apply flex-nowrap no-scrollbar;
+  }
+
+  .tab-item {
+    @apply px-3 py-2 text-xs;
+  }
+
+  .table thead th,
+  .table tbody td {
+    @apply px-3 py-2;
   }
 }
 

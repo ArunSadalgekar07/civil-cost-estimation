@@ -68,7 +68,12 @@ export default function AnalyticsProjectTab({ projectId }: Props) {
     xAxis: {
       type: 'category',
       data: barData.categories,
-      axisLabel: { color: '#94a3b8', fontSize: 11 }
+      axisLabel: {
+        color: '#94a3b8',
+        fontSize: 11,
+        interval: 0,
+        hideOverlap: false,
+      }
     },
     yAxis: {
       type: 'value',
@@ -99,9 +104,9 @@ export default function AnalyticsProjectTab({ projectId }: Props) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { label: 'Direct Cost', value: summary.directCost },
-              { label: 'Grand Total', value: summary.grandTotal },
               { label: 'Markup Applied', value: summary.markup },
               { label: 'Tax Amount', value: summary.tax },
+              { label: 'Grand Total', value: summary.grandTotal },
             ].map(({ label, value }) => (
               <div key={label} className="stat-card">
                 <p className="stat-label">{label}</p>

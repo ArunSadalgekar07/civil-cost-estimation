@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { db } from '@/lib/supabase'
 import { FolderOpen, Search, ArrowRight } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -16,6 +17,7 @@ interface MergedProject {
 }
 
 export default function AdminProjectsPage() {
+  const { t } = useTranslation()
   const [projectsList, setProjectsList] = useState<MergedProject[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -23,9 +25,7 @@ export default function AdminProjectsPage() {
 
   const fetchGlobalProjects = async () => {
     setLoading(true)
-    
-    // We execute both fetch blocks in parallel. Because of our RLS Admin bypass,
-    // this will pull EVERY project in the entire application!
+
     const [projectsRes, profilesRes] = await Promise.all([
       db.from('projects').select('id, name, user_id, type, location, status, created_at'),
       db.from('profiles').select('id, full_name')
@@ -43,11 +43,10 @@ export default function AdminProjectsPage() {
         location: proj.location,
         status: proj.status,
         created_at: proj.created_at,
-        user_name: owner?.full_name || 'Anonymous'
+        user_name: owner?.full_name || t('common.anonymous')
       }
     })
 
-    // Sort by newest globally
     merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     setProjectsList(merged)
@@ -58,8 +57,8 @@ export default function AdminProjectsPage() {
     fetchGlobalProjects()
   }, [])
 
-  const filtered = projectsList.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
+  const filtered = projectsList.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.user_name.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -68,21 +67,21 @@ export default function AdminProjectsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FolderOpen size={20} className="text-accent" />
-          <h1 className="text-2xl font-bold text-white">Global Projects</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.globalProjects')}</h1>
         </div>
         <div className="text-sm font-medium text-surface-muted bg-surface py-1.5 px-4 rounded-full border border-surface-border">
-          {projectsList.length} total across network
+          {t('admin.totalAcrossNetwork', { count: projectsList.length })}
         </div>
       </div>
 
       <div className="relative max-w-sm">
         <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-surface-muted" />
-        <input 
-          type="text" 
-          className="input ps-9" 
-          placeholder="Filter by Project or Architect name..." 
-          value={search} 
-          onChange={e => setSearch(e.target.value)} 
+        <input
+          type="text"
+          className="input ps-9"
+          placeholder={t('admin.filterProjects')}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
         />
       </div>
 
@@ -90,12 +89,12 @@ export default function AdminProjectsPage() {
         <table className="table">
           <thead>
             <tr>
-              <th>Project Title</th>
-              <th>Owner / Architect</th>
-              <th>Type</th>
-              <th>Location</th>
-              <th>Status</th>
-              <th>Created</th>
+              <th>{t('admin.projectTitle')}</th>
+              <th>{t('admin.ownerArchitect')}</th>
+              <th>{t('admin.type')}</th>
+              <th>{t('admin.location')}</th>
+              <th>{t('admin.status')}</th>
+              <th>{t('admin.created')}</th>
             </tr>
           </thead>
           <tbody>
@@ -104,32 +103,28 @@ export default function AdminProjectsPage() {
                 <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
               </td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-8 text-surface-muted">No projects found on network.</td></tr>
+              <tr><td colSpan={6} className="text-center py-8 text-surface-muted">{t('admin.noProjectsNetwork')}</td></tr>
             ) : filtered.map(p => (
-              <tr 
-                key={p.id} 
+              <tr
+                key={p.id}
                 onClick={() => navigate(`/projects/${p.id}`)}
                 className="cursor-pointer hover:bg-white/5 transition-colors group"
               >
                 <td className="font-medium text-white group-hover:text-accent transition-colors">
-                  <div className="flex items-center gap-2">
-                    {p.name}
-                  </div>
+                  <div className="flex items-center gap-2">{p.name}</div>
                 </td>
                 <td className="text-surface-muted">{p.user_name}</td>
                 <td>
                   <span className="badge badge-blue">
-                    {p.type || 'Undefined'}
+                    {p.type || t('common.undefined')}
                   </span>
                 </td>
-                <td className="text-surface-muted max-w-[150px] truncate">
-                  {p.location || '—'}
-                </td>
+                <td className="text-surface-muted max-w-[150px] truncate">{p.location || '—'}</td>
                 <td className="capitalize">
                   <span className={`badge ${
-                    p.status === 'active' ? 'badge-green' : 
-                    p.status === 'completed' ? 'badge-blue' : 
-                    p.status === 'archived' ? 'badge-red' : 
+                    p.status === 'active' ? 'badge-green' :
+                    p.status === 'completed' ? 'badge-blue' :
+                    p.status === 'archived' ? 'badge-red' :
                     'badge-yellow'
                   }`}>
                     {p.status}

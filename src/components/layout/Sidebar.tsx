@@ -43,19 +43,20 @@ export default function Sidebar() {
     <aside
       className={cn(
         'flex flex-col h-screen bg-surface-card border-e border-surface-border transition-all duration-300 ease-in-out flex-shrink-0',
-        collapsed ? 'w-16' : 'w-72'
+        collapsed ? 'w-16' : 'w-16 md:w-72'
       )}
     >
       {/* Logo */}
       <div className={cn(
         'flex items-center gap-3 px-4 h-14 border-b border-surface-border flex-shrink-0',
-        collapsed && 'justify-center px-0'
+        'justify-center md:justify-start px-0 md:px-4',
+        collapsed && 'md:justify-center md:px-0'
       )}>
         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center flex-shrink-0">
           <Home size={16} className="text-white" />
         </div>
         {!collapsed && (
-          <span className="font-bold text-sm text-white leading-tight">
+          <span className="hidden md:inline font-bold text-sm text-white leading-tight">
             Cost<br />Estimator
           </span>
         )}
@@ -68,19 +69,19 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              cn('nav-item', isActive && 'active', collapsed && 'justify-center px-0')
+              cn('nav-item justify-center px-0 md:justify-start md:px-3', isActive && 'active', collapsed && 'md:justify-center md:px-0')
             }
             title={collapsed ? item.label : undefined}
           >
             <span className="flex-shrink-0">{item.icon}</span>
-            {!collapsed && <span>{item.label}</span>}
+            {!collapsed && <span className="hidden md:inline">{item.label}</span>}
           </NavLink>
         ))}
 
         {/* Admin section */}
         {isAdmin && (
           <>
-            <div className={cn('pt-4 pb-2', collapsed && 'hidden')}>
+            <div className={cn('pt-4 pb-2 hidden md:block', collapsed && 'md:hidden')}>
               <div className="flex items-center gap-2 px-3 mb-1">
                 <Shield size={12} className="text-surface-muted" />
                 <span className="text-xs font-semibold text-surface-muted uppercase tracking-wider">
@@ -88,18 +89,18 @@ export default function Sidebar() {
                 </span>
               </div>
             </div>
-            {collapsed && <div className="my-2 border-t border-surface-border mx-2" />}
+            <div className={cn('my-2 border-t border-surface-border mx-2 md:hidden', collapsed && 'md:block')} />
             {adminNav.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  cn('nav-item', isActive && 'active', collapsed && 'justify-center px-0')
+                  cn('nav-item justify-center px-0 md:justify-start md:px-3', isActive && 'active', collapsed && 'md:justify-center md:px-0')
                 }
                 title={collapsed ? item.label : undefined}
               >
                 <span className="flex-shrink-0">{item.icon}</span>
-                {!collapsed && <span className="text-xs">{item.label}</span>}
+                {!collapsed && <span className="hidden md:inline text-xs">{item.label}</span>}
               </NavLink>
             ))}
           </>
@@ -110,16 +111,16 @@ export default function Sidebar() {
       <div className="border-t border-surface-border p-2 space-y-1">
         <button
           onClick={() => signOut()}
-          className={cn('nav-item w-full hover:text-danger hover:bg-danger/10', collapsed && 'justify-center px-0')}
+          className={cn('nav-item w-full justify-center px-0 md:justify-start md:px-3 hover:text-danger hover:bg-danger/10', collapsed && 'md:justify-center md:px-0')}
           title={collapsed ? t('nav.logout') : undefined}
         >
           <LogOut size={18} className="flex-shrink-0" />
-          {!collapsed && <span>{t('nav.logout')}</span>}
+          {!collapsed && <span className="hidden md:inline">{t('nav.logout')}</span>}
         </button>
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={cn('nav-item w-full', collapsed && 'justify-center px-0')}
+          className={cn('nav-item w-full hidden md:flex', collapsed && 'justify-center px-0')}
           title={t('nav.collapseSidebar')}
         >
           {collapsed

@@ -21,7 +21,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
 
   const [form, setForm] = useState({
     name: project?.name || '',
-    type: project?.type || '',
+    type: project?.type || projectTypes[0] || '',
     size: project?.size?.toString() || '',
     size_unit: project?.size_unit || 'Square Meters',
     location: project?.location || '',
@@ -32,6 +32,12 @@ export default function ProjectFormModal({ project, onClose }: Props) {
     status: project?.status || 'active',
   })
 
+  useEffect(() => {
+    if (!form.type && projectTypes.length > 0) {
+      setForm(f => ({ ...f, type: projectTypes[0] }))
+    }
+  }, [projectTypes, form.type])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) { toast.error('Project name is required'); return }
@@ -39,6 +45,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
 
     const data = {
       ...form,
+      type: form.type || projectTypes[0] || '',
       size: form.size ? Number(form.size) : null,
       duration: form.duration ? Number(form.duration) : null,
       user_id: user!.id,
@@ -58,9 +65,9 @@ export default function ProjectFormModal({ project, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl shadow-2xl animate-in overflow-hidden">
+      <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] shadow-2xl animate-in overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-surface-border">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-surface-border">
           <h2 className="text-lg font-semibold text-white">
             {project ? t('projects.form.update') : t('projects.form.create')}
           </h2>
@@ -70,7 +77,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[calc(100vh-11rem)] overflow-y-auto">
           {/* Name */}
           <div className="sm:col-span-2">
             <label className="label">{t('projects.form.name')} <span className="text-danger">*</span></label>
@@ -88,8 +95,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
           {/* Type */}
           <div>
             <label className="label">{t('projects.form.type')}</label>
-            <select className="input" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-              <option value="">Select type...</option>
+            <select className="input" value={form.type || projectTypes[0] || ''} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
               {projectTypes.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -103,9 +109,9 @@ export default function ProjectFormModal({ project, onClose }: Props) {
           {/* Size + unit */}
           <div>
             <label className="label">{t('projects.form.size')}</label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input type="number" className="input" placeholder="e.g. 3000" value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))} />
-              <select className="input w-40" value={form.size_unit} onChange={e => setForm(f => ({ ...f, size_unit: e.target.value }))}>
+              <select className="input sm:w-40" value={form.size_unit} onChange={e => setForm(f => ({ ...f, size_unit: e.target.value }))}>
                 {sizeUnits.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
@@ -114,9 +120,9 @@ export default function ProjectFormModal({ project, onClose }: Props) {
           {/* Duration + unit */}
           <div>
             <label className="label">{t('projects.form.duration')}</label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input type="number" className="input" placeholder="e.g. 12" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} />
-              <select className="input w-36" value={form.duration_unit} onChange={e => setForm(f => ({ ...f, duration_unit: e.target.value }))}>
+              <select className="input sm:w-36" value={form.duration_unit} onChange={e => setForm(f => ({ ...f, duration_unit: e.target.value }))}>
                 {durationUnits.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
@@ -136,7 +142,7 @@ export default function ProjectFormModal({ project, onClose }: Props) {
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-surface-border">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3 p-4 sm:p-6 border-t border-surface-border">
           <button onClick={onClose} className="btn-outline">{t('projects.form.cancel')}</button>
           <button
             type="submit"

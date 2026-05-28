@@ -68,7 +68,7 @@ export default function ShareModal({ project, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-md shadow-2xl animate-in">
+      <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-md max-h-[calc(100vh-2rem)] overflow-hidden shadow-2xl animate-in">
         <div className="flex items-center justify-between p-5 border-b border-surface-border">
           <div className="flex items-center gap-2">
             <Link2 size={18} className="text-accent" />
@@ -77,13 +77,13 @@ export default function ShareModal({ project, onClose }: Props) {
           <button onClick={onClose} className="btn btn-ghost p-1.5"><X size={16} /></button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-4 sm:p-5 space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto">
           <p className="text-sm text-surface-muted">Share <strong className="text-white">{project.name}</strong> with others using a secure link.</p>
 
           {/* Generated link */}
           <div>
             <label className="label">Share Link</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 min-w-0">
               <input
                 readOnly
                 value={savedUrl || shareUrl}
@@ -125,7 +125,7 @@ export default function ShareModal({ project, onClose }: Props) {
 
         </div>
 
-        <div className="flex justify-end p-5 border-t border-surface-border">
+        <div className="flex justify-end p-4 sm:p-5 border-t border-surface-border">
           <button onClick={onClose} className="btn-outline">Close</button>
         </div>
       </div>

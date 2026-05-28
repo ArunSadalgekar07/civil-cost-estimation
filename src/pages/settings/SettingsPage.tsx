@@ -1,25 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
+import { useSystemStore } from '@/store/systemStore'
 import { db, supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
-import i18n from '@/i18n/config'
 import { User, Globe, Lock, Database } from 'lucide-react'
-import { CURRENCIES, DEFAULT_CURRENCY, getCurrencyRate } from '@/lib/utils'
+import { CURRENCIES, getCurrencyRate } from '@/lib/utils'
 import type { CostItem, FinancialSettings, Project, Risk } from '@/types'
 
 export default function SettingsPage() {
   const { t } = useTranslation()
   const { user, profile, setProfile } = useAuthStore()
+  const { globalCurrency } = useSystemStore()
   const [activeSection, setActiveSection] = useState('profile')
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [saving, setSaving] = useState(false)
-  const [lang, setLang] = useState(i18n.language)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [updatingPassword, setUpdatingPassword] = useState(false)
-  const [preferredCurrency, setPreferredCurrency] = useState(localStorage.getItem('preferred_currency') || DEFAULT_CURRENCY)
+  // Use localStorage preference first, fall back to admin-set global currency
+  const [preferredCurrency, setPreferredCurrency] = useState(localStorage.getItem('preferred_currency') || globalCurrency)
   const [updatingCurrency, setUpdatingCurrency] = useState(false)
 
   // Data Portability States
@@ -131,12 +132,6 @@ export default function SettingsPage() {
     setSaving(false)
   }
 
-  const handleLangChange = (newLang: string) => {
-    i18n.changeLanguage(newLang)
-    setLang(newLang)
-    toast.success(`Language changed to ${newLang === 'en' ? 'English' : 'Hindi'}`)
-  }
-
   const convertUserProjectCurrency = async (newCurrency: string) => {
     if (!user || newCurrency === preferredCurrency) return
 
@@ -155,7 +150,7 @@ export default function SettingsPage() {
     let conversionMeta = ''
     for (const project of (projects || []) as (Project & { financial_settings?: FinancialSettings[] })[]) {
       const currentSettings = project.financial_settings?.[0]
-      const oldCurrency = currentSettings?.currency || preferredCurrency || DEFAULT_CURRENCY
+      const oldCurrency = currentSettings?.currency || preferredCurrency || globalCurrency
       if (oldCurrency === newCurrency) continue
 
       const { rate, date, source } = await getCurrencyRate(oldCurrency, newCurrency)
@@ -195,8 +190,8 @@ export default function SettingsPage() {
   const sections = [
     { id: 'profile', label: t('settings.profile'), icon: <User size={16} /> },
     { id: 'preferences', label: t('settings.preferences'), icon: <Globe size={16} /> },
-    { id: 'security', label: 'Security', icon: <Lock size={16} /> },
-    { id: 'data', label: 'Data Management', icon: <Database size={16} /> },
+    { id: 'security', label: t('settings.security'), icon: <Lock size={16} /> },
+    { id: 'data', label: t('settings.dataManagement'), icon: <Database size={16} /> },
   ]
 
   return (
@@ -234,7 +229,7 @@ export default function SettingsPage() {
                 <input type="email" className="input max-w-sm" value={user?.email || ''} readOnly disabled />
               </div>
               <button onClick={handleSaveProfile} disabled={saving} className="btn-primary">
-                {saving ? 'Saving...' : t('settings.save')}
+                {saving ? t('common.loading') : t('settings.save')}
               </button>
             </div>
           )}
@@ -242,7 +237,7 @@ export default function SettingsPage() {
           {activeSection === 'preferences' && (
             <div className="card space-y-5">
               <h2 className="font-semibold text-white">{t('settings.preferences')}</h2>
-              <div>
+              <div className="hidden">
                 <label className="label">{t('settings.language')}</label>
                 <div className="flex gap-3">
                   {[
@@ -251,8 +246,8 @@ export default function SettingsPage() {
                   ].map(l => (
                     <button
                       key={l.code}
-                      onClick={() => handleLangChange(l.code)}
-                      className={lang === l.code ? 'btn-primary btn-sm' : 'btn-outline btn-sm'}
+                      disabled
+                      className="btn-outline btn-sm"
                     >
                       {l.label}
                     </button>
@@ -260,7 +255,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div>
-                <label className="label">Currency</label>
+                <label className="label">{t('settings.currency')}</label>
                 <select
                   className="input max-w-sm"
                   value={preferredCurrency}
@@ -272,7 +267,7 @@ export default function SettingsPage() {
                   ))}
                 </select>
                 <p className="text-xs text-surface-muted mt-2">
-                  Changing currency converts your existing project costs and risk values.
+                  {t('settings.currencyNote')}
                 </p>
               </div>
             </div>
@@ -280,33 +275,33 @@ export default function SettingsPage() {
 
           {activeSection === 'security' && (
             <div className="card space-y-5">
-              <h2 className="font-semibold text-white">Security</h2>
+              <h2 className="font-semibold text-white">{t('settings.security')}</h2>
               <div>
-                <label className="label">Current Password</label>
-                <input 
-                  type="password" 
-                  className="input max-w-sm" 
-                  placeholder="••••••••" 
+                <label className="label">{t('settings.currentPassword')}</label>
+                <input
+                  type="password"
+                  className="input max-w-sm"
+                  placeholder="••••••••"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                 />
               </div>
               <div>
-                <label className="label">New Password</label>
-                <input 
-                  type="password" 
-                  className="input max-w-sm" 
-                  placeholder="••••••••" 
+                <label className="label">{t('settings.newPassword')}</label>
+                <input
+                  type="password"
+                  className="input max-w-sm"
+                  placeholder="••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
               </div>
-              <button 
-                onClick={handleUpdatePassword} 
-                disabled={updatingPassword} 
+              <button
+                onClick={handleUpdatePassword}
+                disabled={updatingPassword}
                 className="btn-primary"
               >
-                {updatingPassword ? 'Updating...' : 'Update Password'}
+                {updatingPassword ? t('settings.updatingPassword') : t('settings.updatePassword')}
               </button>
             </div>
           )}
@@ -316,33 +311,33 @@ export default function SettingsPage() {
               <div className="card space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="font-semibold text-white">Mass Data Export</h2>
-                    <p className="text-sm text-surface-muted mt-1">Download a completely offline backup copy of all your created projects, cost tracking models, settings, and histories encapsulated into a portable JSON structure.</p>
+                    <h2 className="font-semibold text-white">{t('settings.massExport')}</h2>
+                    <p className="text-sm text-surface-muted mt-1">{t('settings.massExportDesc')}</p>
                   </div>
                   <Database className="text-accent opacity-50" size={32} />
                 </div>
-                <button 
-                  onClick={handleExportData} 
-                  disabled={exporting} 
+                <button
+                  onClick={handleExportData}
+                  disabled={exporting}
                   className="btn-outline border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                 >
-                  {exporting ? 'Extracting payload...' : 'Download JSON Platform Backup'}
+                  {exporting ? t('settings.extractingPayload') : t('settings.downloadBackup')}
                 </button>
               </div>
 
               <div className="card border-red-500/20 bg-red-950/20 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="font-semibold text-red-500">Danger Zone: Purge Account</h2>
-                    <p className="text-sm text-surface-muted mt-1">Execute the Right to be Forgotten protocol. Permanently obliterate this system profile and cascade-delete all connected estimation data instantly.</p>
+                    <h2 className="font-semibold text-red-500">{t('settings.dangerZone')}</h2>
+                    <p className="text-sm text-surface-muted mt-1">{t('settings.dangerZoneDesc')}</p>
                   </div>
                 </div>
-                <button 
-                  onClick={handleDeleteAccount} 
-                  disabled={deleting} 
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
                   className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded font-medium text-sm transition-colors"
                 >
-                  {deleting ? 'Awaiting server...' : 'Permanently Delete Account'}
+                  {deleting ? t('settings.awaitingServer') : t('settings.deleteAccount')}
                 </button>
               </div>
             </div>

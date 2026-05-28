@@ -29,15 +29,6 @@ export const sampleResources = [
   { category: 'equipment', name: 'Scaffolding (Steel H-Frames)', description: 'Steel tubular scaffolding set', unit: 'frame/day', unit_price: 15 },
   { category: 'equipment', name: 'Needle Vibrator', description: 'Concrete vibrator with electrical motor/petrol engine', unit: 'day', unit_price: 400 },
   { category: 'equipment', name: 'Water Tanker (5000 Liters)', description: 'Water supply for curing and construction', unit: 'trip', unit_price: 800 },
-
-  // Assemblies
-  { category: 'assemblies', name: 'RCC Slab (M25)', description: 'Includes concrete, steel, shuttering, and labor', unit: 'sq ft', unit_price: 220 },
-  { category: 'assemblies', name: 'Brick Masonry (9" thick)', description: 'With cement mortar 1:6 including labor', unit: 'sq ft', unit_price: 160 },
-  { category: 'assemblies', name: 'Internal Plastering (12mm)', description: 'With cement mortar 1:4 including labor', unit: 'sq ft', unit_price: 28 },
-  { category: 'assemblies', name: 'Vitrified Tile Flooring', description: 'Including mortar bed, jointing, and labor', unit: 'sq ft', unit_price: 110 },
-  { category: 'assemblies', name: 'Painting (Interior Walls)', description: '2 coats emulsion + 1 coat primer + 2 coats putty', unit: 'sq ft', unit_price: 22 },
-  { category: 'assemblies', name: 'UPVC Window (Sliding)', description: '2 track with 5mm clear glass and installation', unit: 'sq ft', unit_price: 350 },
-  { category: 'assemblies', name: 'False Ceiling (Gypsum)', description: 'Gypsum board with GI framework', unit: 'sq ft', unit_price: 75 },
 ]
 
 export const seedSampleData = async (userId: string, activeTab: string) => {

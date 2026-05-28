@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils'
 // Project tabs
 import OverviewTab from './tabs/OverviewTab'
 import CostsTab from './tabs/CostsTab'
-import RisksTab from './tabs/RisksTab'
 import ScenarioTab from './tabs/ScenarioTab'
 import PricingTab from './tabs/PricingTab'
 import AnalyticsProjectTab from './tabs/AnalyticsProjectTab'
@@ -21,17 +20,6 @@ import ShareModal from '@/components/projects/ShareModal'
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal'
 import type { TabId } from '@/types'
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'overview', label: 'nav.overview', icon: '📋' },
-  { id: 'costs', label: 'nav.costs', icon: '💰' },
-  { id: 'risks', label: 'nav.risks', icon: '⚠️' },
-  { id: 'scenario', label: 'nav.scenario', icon: '📊' },
-  { id: 'pricing', label: 'nav.pricing', icon: '📈' },
-  { id: 'analytics', label: 'nav.analytics', icon: '🔢' },
-  { id: 'reports', label: 'nav.reports', icon: '📄' },
-  { id: 'versions', label: 'nav.versions', icon: '🕒' },
-]
-
 export default function ProjectDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
@@ -39,7 +27,7 @@ export default function ProjectDetailPage() {
   const { user } = useAuthStore()
   const {
     currentProject, loading,
-    fetchProject, fetchCostItems, fetchRisks, fetchFinancialSettings,
+    fetchProject, fetchCostItems, fetchFinancialSettings,
     deleteProject
   } = useProjectStore()
 
@@ -52,10 +40,9 @@ export default function ProjectDetailPage() {
     if (id) {
       fetchProject(id)
       fetchCostItems(id)
-      fetchRisks(id)
       fetchFinancialSettings(id)
     }
-  }, [id, fetchProject, fetchCostItems, fetchRisks, fetchFinancialSettings])
+  }, [id, fetchProject, fetchCostItems, fetchFinancialSettings])
 
   const handleDelete = async () => {
     if (!id) return
@@ -86,7 +73,6 @@ export default function ProjectDetailPage() {
   const tabLabels: Record<TabId, string> = {
     overview: t('projects.tabs.overview'),
     costs: t('projects.tabs.costs'),
-    risks: t('projects.tabs.risks'),
     scenario: t('projects.tabs.scenario'),
     pricing: t('projects.tabs.pricing'),
     analytics: t('projects.tabs.analytics'),
@@ -145,7 +131,6 @@ export default function ProjectDetailPage() {
       <div className="animate-in">
         {activeTab === 'overview' && <OverviewTab project={currentProject} />}
         {activeTab === 'costs' && <CostsTab projectId={currentProject.id} />}
-        {activeTab === 'risks' && <RisksTab projectId={currentProject.id} />}
         {activeTab === 'scenario' && <ScenarioTab projectId={currentProject.id} />}
         {activeTab === 'pricing' && <PricingTab projectId={currentProject.id} />}
         {activeTab === 'analytics' && <AnalyticsProjectTab projectId={currentProject.id} />}
@@ -159,7 +144,7 @@ export default function ProjectDetailPage() {
       {showDelete && (
         <DeleteConfirmModal
           title="Delete Project"
-          message={`Delete "${currentProject.name}"? This will permanently remove all cost items, risks, and data.`}
+          message={`Delete "${currentProject.name}"? This will permanently remove all cost items and project data.`}
           onConfirm={handleDelete}
           onCancel={() => setShowDelete(false)}
         />

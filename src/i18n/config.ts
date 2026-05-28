@@ -10,7 +10,7 @@ i18n
       en: { translation: en },
       hi: { translation: hi },
     },
-    lng: localStorage.getItem('lang') || 'en',
+    lng: localStorage.getItem('global_language') || localStorage.getItem('lang') || 'en',
     fallbackLng: 'en',
     interpolation: { escapeValue: false },
   })
@@ -23,7 +23,7 @@ i18n.on('languageChanged', (lng) => {
 })
 
 // Apply initial direction
-const initialLang = localStorage.getItem('lang') || 'en'
+const initialLang = localStorage.getItem('global_language') || localStorage.getItem('lang') || 'en'
 document.documentElement.dir = 'ltr'
 document.documentElement.lang = initialLang
 

@@ -79,7 +79,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       .select('*')
       .eq('id', id)
       .single()
-    if (!error && data) set({ currentProject: data as Project })
+    if (!error && data) set({ currentProject: data as Project, risks: [] })
     set({ loading: false })
   },
 
@@ -207,7 +207,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       .from('financial_settings')
       .select('*')
       .eq('project_id', projectId)
-      .single()
+      .maybeSingle()
     if (!error && data) {
       set({ financialSettings: data as FinancialSettings })
     } else {

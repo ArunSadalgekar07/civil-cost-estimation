@@ -1,38 +1,18 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { User, Globe } from 'lucide-react'
+import { User } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import i18n from '@/i18n/config'
 import { Root, Trigger, Portal, Content, Item } from '@radix-ui/react-dropdown-menu'
 import * as Avatar from '@radix-ui/react-avatar'
 
 export default function Header() {
-  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, profile } = useAuthStore()
-  const [lang, setLang] = useState(i18n.language)
-
-  const toggleLang = () => {
-    const newLang = lang === 'en' ? 'hi' : 'en'
-    i18n.changeLanguage(newLang)
-    setLang(newLang)
-  }
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User'
   const initials = displayName.slice(0, 2).toUpperCase()
 
   return (
     <header className="h-14 bg-surface-card border-b border-surface-border flex items-center justify-end px-6 gap-3 flex-shrink-0">
-      {/* Language toggle */}
-      <button
-        onClick={toggleLang}
-        className="flex items-center gap-1.5 btn btn-ghost text-xs font-medium"
-      >
-        <Globe size={15} />
-        <span>{lang === 'en' ? t('common.hindi') : t('common.english')}</span>
-      </button>
-
       {/* User avatar */}
       <Root>
         <Trigger asChild>

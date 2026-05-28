@@ -11,26 +11,47 @@ interface Props { projectId: string }
 export default function PricingTab({ projectId }: Props) {
   const { user, profile } = useAuthStore()
   const { currentProject, costItems, risks, financialSettings, updateFinancialSettings } = useProjectStore()
-  const { currencies } = useSystemStore()
+  const { currencies, globalCurrency } = useSystemStore()
   
   const [settings, setSettings] = useState(financialSettings || {
     id: '', project_id: projectId,
-    overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY
+    overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: globalCurrency
   })
   const [saving, setSaving] = useState(false)
   const [previewRate, setPreviewRate] = useState(1)
   const [rateMeta, setRateMeta] = useState('')
 
   useEffect(() => {
-    if (financialSettings) {
-      setSettings(financialSettings)
-      setPreviewRate(1)
-      setRateMeta('')
+    const syncCurrency = async () => {
+      const sourceCurrency = financialSettings?.currency || globalCurrency || DEFAULT_CURRENCY
+      const nextSettings = {
+        id: financialSettings?.id || '',
+        project_id: financialSettings?.project_id || projectId,
+        overhead_pct: financialSettings?.overhead_pct ?? 10,
+        contingency_pct: financialSettings?.contingency_pct ?? 5,
+        markup_pct: financialSettings?.markup_pct ?? 15,
+        tax_pct: financialSettings?.tax_pct ?? 5,
+        currency: globalCurrency || sourceCurrency,
+      }
+
+      setSettings(nextSettings)
+
+      if (sourceCurrency === nextSettings.currency) {
+        setPreviewRate(1)
+        setRateMeta('')
+        return
+      }
+
+      const { rate, date, source } = await getCurrencyRate(sourceCurrency, nextSettings.currency)
+      setPreviewRate(rate)
+      setRateMeta(`Preview uses ${source} ${sourceCurrency} to ${nextSettings.currency} rate dated ${date}.`)
     }
-  }, [financialSettings])
+
+    syncCurrency()
+  }, [financialSettings, globalCurrency, projectId])
 
   const canEdit = profile?.role === 'admin' || currentProject?.user_id === user?.id
-  const sourceCurrency = financialSettings?.currency || DEFAULT_CURRENCY
+  const sourceCurrency = financialSettings?.currency || globalCurrency || DEFAULT_CURRENCY
   const previewCostItems = sourceCurrency === settings.currency
     ? costItems
     : costItems.map((item) => ({

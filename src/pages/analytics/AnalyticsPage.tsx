@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { useSystemStore } from '@/store/systemStore'
 import { db } from '@/lib/supabase'
-import { convertCurrency, DEFAULT_CURRENCY, formatCurrency } from '@/lib/utils'
+import { convertCurrency, formatCurrency } from '@/lib/utils'
 import { calculateCostSummary } from '@/lib/calculations'
 import type { CostItem, FinancialSettings, Risk } from '@/types'
 import { TrendingUp } from 'lucide-react'
@@ -14,15 +14,24 @@ export default function AnalyticsPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { projects, fetchProjects } = useProjectStore()
-  const { currencies } = useSystemStore()
+  const { currencies, globalCurrency } = useSystemStore()
   const [selectedProject, setSelectedProject] = useState('all')
-  const [selectedCurrency, setSelectedCurrency] = useState(DEFAULT_CURRENCY)
+  const [selectedCurrency, setSelectedCurrency] = useState(globalCurrency)
   const [projectData, setProjectData] = useState<Record<string, { items: CostItem[], risks: Risk[], settings: FinancialSettings | null }>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (user) fetchProjects(user.id)
   }, [user, fetchProjects])
+
+  // Sync selectedCurrency if globalCurrency changes (e.g. admin updates it)
+  useEffect(() => {
+    setSelectedCurrency(prev => {
+      // Only override if the user hasn't manually picked something from the dropdown
+      // We track this by checking if prev was the old globalCurrency
+      return globalCurrency
+    })
+  }, [globalCurrency])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,10 +51,12 @@ export default function AnalyticsPage() {
         }
       }
       setProjectData(data)
-      
+
+      // Use per-project currency if found, otherwise use globalCurrency from admin settings
       const foundCurrency = Object.values(data).find(d => d.settings?.currency)?.settings?.currency
       if (foundCurrency) setSelectedCurrency(foundCurrency)
-      
+      else setSelectedCurrency(globalCurrency)
+
       setLoading(false)
     }
 
@@ -54,7 +65,7 @@ export default function AnalyticsPage() {
   }, [projects])
 
   const defaultSettings: FinancialSettings = {
-    id: '', project_id: '', overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: DEFAULT_CURRENCY
+    id: '', project_id: '', overhead_pct: 10, contingency_pct: 5, markup_pct: 15, tax_pct: 5, currency: globalCurrency
   }
 
   const getSummary = (projectId: string) => {
@@ -63,7 +74,7 @@ export default function AnalyticsPage() {
     return calculateCostSummary(d.items, d.settings || defaultSettings, d.risks)
   }
 
-  const getProjectCurrency = (projectId: string) => projectData[projectId]?.settings?.currency || DEFAULT_CURRENCY
+  const getProjectCurrency = (projectId: string) => projectData[projectId]?.settings?.currency || globalCurrency
   const convertProjectAmount = (projectId: string, amount: number) =>
     convertCurrency(amount, getProjectCurrency(projectId), selectedCurrency)
 

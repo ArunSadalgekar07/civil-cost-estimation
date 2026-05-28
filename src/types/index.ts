@@ -96,7 +96,7 @@ export interface ProjectCollaborator {
 export interface Resource {
   id: string
   user_id: string
-  category: 'materials' | 'labor' | 'equipment' | 'assemblies'
+  category: 'materials' | 'labor' | 'equipment'
   name: string
   description: string | null
   unit: string | null
@@ -149,5 +149,5 @@ export type RiskFormData = Omit<Risk, 'id' | 'created_at'>
 export type ResourceFormData = Omit<Resource, 'id' | 'user_id' | 'created_at'>
 
 // UI types
-export type TabId = 'overview' | 'costs' | 'risks' | 'scenario' | 'pricing' | 'analytics' | 'reports' | 'versions'
+export type TabId = 'overview' | 'costs' | 'scenario' | 'pricing' | 'analytics' | 'reports' | 'versions'
 export type CostCategory = 'materials' | 'labor' | 'equipment' | 'additional'

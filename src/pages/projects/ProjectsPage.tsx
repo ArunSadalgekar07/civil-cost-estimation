@@ -8,6 +8,7 @@ import { useProjectStore } from '@/store/projectStore'
 import { formatDate } from '@/lib/utils'
 import type { Project } from '@/types'
 import ProjectFormModal from '@/components/projects/ProjectFormModal'
+import ShareModal from '@/components/projects/ShareModal'
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 
@@ -18,6 +19,8 @@ export default function ProjectsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [editTarget, setEditTarget] = useState<Project | null>(null)
+  const [shareTarget, setShareTarget] = useState<Project | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
 
   useEffect(() => {
@@ -89,6 +92,8 @@ export default function ProjectsPage() {
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  onEdit={() => setEditTarget(project)}
+                  onShare={() => setShareTarget(project)}
                   onDelete={() => setDeleteTarget(project)}
                   onClick={() => navigate(`/projects/${project.id}`)}
                 />
@@ -100,6 +105,8 @@ export default function ProjectsPage() {
 
       {/* Modals */}
       {showForm && <ProjectFormModal onClose={() => setShowForm(false)} />}
+      {editTarget && <ProjectFormModal project={editTarget} onClose={() => setEditTarget(null)} />}
+      {shareTarget && <ShareModal project={shareTarget} onClose={() => setShareTarget(null)} />}
       {deleteTarget && (
         <DeleteConfirmModal
           title="Delete Project"
@@ -112,8 +119,10 @@ export default function ProjectsPage() {
   )
 }
 
-function ProjectCard({ project, onDelete, onClick }: {
+function ProjectCard({ project, onEdit, onShare, onDelete, onClick }: {
   project: Project
+  onEdit: () => void
+  onShare: () => void
   onDelete: () => void
   onClick: () => void
 }) {
@@ -132,7 +141,7 @@ function ProjectCard({ project, onDelete, onClick }: {
           <DropdownMenu.Trigger asChild>
             <button
               onClick={e => e.stopPropagation()}
-              className="btn btn-ghost p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="btn btn-ghost p-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             >
               <MoreHorizontal size={15} />
             </button>
@@ -144,16 +153,22 @@ function ProjectCard({ project, onDelete, onClick }: {
               align="end"
               onClick={e => e.stopPropagation()}
             >
-              <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-surface-muted hover:text-white hover:bg-white/5 rounded-lg cursor-pointer outline-none transition-colors">
+              <DropdownMenu.Item
+                className="flex items-center gap-2 px-3 py-2 text-sm text-surface-muted hover:text-white hover:bg-white/5 rounded-lg cursor-pointer outline-none transition-colors"
+                onSelect={onEdit}
+              >
                 <Pencil size={13} /> Edit
               </DropdownMenu.Item>
-              <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-surface-muted hover:text-white hover:bg-white/5 rounded-lg cursor-pointer outline-none transition-colors">
+              <DropdownMenu.Item
+                className="flex items-center gap-2 px-3 py-2 text-sm text-surface-muted hover:text-white hover:bg-white/5 rounded-lg cursor-pointer outline-none transition-colors"
+                onSelect={onShare}
+              >
                 <Share2 size={13} /> Share
               </DropdownMenu.Item>
               <DropdownMenu.Separator className="my-1 border-t border-surface-border" />
               <DropdownMenu.Item
                 className="flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger/10 rounded-lg cursor-pointer outline-none transition-colors"
-                onClick={onDelete}
+                onSelect={onDelete}
               >
                 <Trash2 size={13} /> Delete
               </DropdownMenu.Item>
