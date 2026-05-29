@@ -5,14 +5,13 @@ import { toast } from 'sonner'
 import { db } from '@/lib/supabase'
 import { calculateCostSummary, calculateItemCost } from '@/lib/calculations'
 import { DEFAULT_CURRENCY, formatCurrency, formatDate, sha256 } from '@/lib/utils'
-import type { CostItem, FinancialSettings, Project, Risk } from '@/types'
+import type { CostItem, FinancialSettings, Project } from '@/types'
 
 type SharePayload = {
   status: 'ok' | 'not_found' | 'expired' | 'password_required'
   password_required?: boolean
   project?: Project
   cost_items?: CostItem[]
-  risks?: Risk[]
   financial_settings?: FinancialSettings | null
 }
 
@@ -57,7 +56,6 @@ export default function ShareViewPage() {
 
   const project = payload?.project
   const costItems = useMemo(() => payload?.cost_items || [], [payload?.cost_items])
-  const risks = useMemo(() => payload?.risks || [], [payload?.risks])
   const financialSettings = useMemo(() => (
     payload?.financial_settings || {
       ...fallbackFinancialSettings,
@@ -66,8 +64,8 @@ export default function ShareViewPage() {
   ), [payload?.financial_settings, project?.id])
 
   const summary = useMemo(
-    () => calculateCostSummary(costItems, financialSettings, risks),
-    [costItems, financialSettings, risks]
+    () => calculateCostSummary(costItems, financialSettings),
+    [costItems, financialSettings]
   )
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -155,7 +153,7 @@ export default function ShareViewPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="card">
             <p className="text-sm text-surface-muted">Total Price</p>
             <p className="text-2xl font-bold mt-2">{formatCurrency(summary.totalPrice, currency)}</p>
@@ -167,10 +165,6 @@ export default function ShareViewPage() {
           <div className="card">
             <p className="text-sm text-surface-muted">Cost Items</p>
             <p className="text-xl font-semibold mt-2">{costItems.length}</p>
-          </div>
-          <div className="card">
-            <p className="text-sm text-surface-muted">Risks</p>
-            <p className="text-xl font-semibold mt-2">{risks.length}</p>
           </div>
         </section>
 
@@ -191,52 +185,32 @@ export default function ShareViewPage() {
           )}
         </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="card">
-            <h2 className="font-semibold mb-4">Cost Breakdown</h2>
-            <div className="space-y-3">
-              {categoryTotals.map(([label, value]) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <span className="text-surface-muted">{label}</span>
-                  <span>{formatCurrency(value as number, currency)}</span>
-                </div>
-              ))}
-              <div className="border-t border-surface-border pt-3 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-muted">Overhead</span>
-                  <span>{formatCurrency(summary.overhead, currency)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-muted">Contingency</span>
-                  <span>{formatCurrency(summary.contingency, currency)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-muted">Markup</span>
-                  <span>{formatCurrency(summary.markup, currency)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-surface-muted">Tax</span>
-                  <span>{formatCurrency(summary.tax, currency)}</span>
-                </div>
+        <section className="card">
+          <h2 className="font-semibold mb-4">Cost Breakdown</h2>
+          <div className="space-y-3">
+            {categoryTotals.map(([label, value]) => (
+              <div key={label} className="flex justify-between text-sm">
+                <span className="text-surface-muted">{label}</span>
+                <span>{formatCurrency(value as number, currency)}</span>
               </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h2 className="font-semibold mb-4">Risk Summary</h2>
-            <div className="space-y-3">
-              {risks.length === 0 ? (
-                <p className="text-sm text-surface-muted">No risks have been added.</p>
-              ) : risks.map(risk => (
-                <div key={risk.id} className="border border-surface-border rounded-lg p-3">
-                  <div className="flex justify-between gap-3">
-                    <p className="text-sm font-medium">{risk.name}</p>
-                    <span className="text-xs text-surface-muted">{risk.probability}%</span>
-                  </div>
-                  <p className="text-xs text-surface-muted mt-1">{formatCurrency(risk.impact || 0, currency)}</p>
-                  {risk.mitigation && <p className="text-xs text-surface-muted mt-2">{risk.mitigation}</p>}
-                </div>
-              ))}
+            ))}
+            <div className="border-t border-surface-border pt-3 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-surface-muted">Overhead</span>
+                <span>{formatCurrency(summary.overhead, currency)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-surface-muted">Contingency</span>
+                <span>{formatCurrency(summary.contingency, currency)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-surface-muted">Markup</span>
+                <span>{formatCurrency(summary.markup, currency)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-surface-muted">Tax</span>
+                <span>{formatCurrency(summary.tax, currency)}</span>
+              </div>
             </div>
           </div>
         </section>
